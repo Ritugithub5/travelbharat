@@ -1,0 +1,100 @@
+{
+  "navbar": {
+    "home": "Home",
+    "states": "States",
+    "destinations": "Destinations",
+    "about": "About",
+    "contact": "Contact",
+    "search": "Search",
+    "login": "Login",
+    "signup": "Sign Up",
+    "logout": "Logout",
+    "profile": "Profile",
+    "admin": "Admin"
+  },
+  "home": {
+    "title": "Explore India State by State",
+    "subtitle": "Discover tourist destinations across all regions of India",
+    "exploreStates": "Explore States",
+    "viewDestinations": "View Destinations",
+    "featured": "Featured Destinations",
+    "categories": "Categories",
+    "planYourJourney": "Plan Your Journey"
+  },
+  "states": {
+    "title": "States of India",
+    "subtitle": "Discover tourist destinations across all 28 states and 8 union territories",
+    "searchPlaceholder": "Search states by name, capital, or famous places...",
+    "noResults": "No states found",
+    "capital": "Capital",
+    "region": "Region",
+    "destinations": "destinations",
+    "famousFor": "Famous For"
+  },
+  "destinations": {
+    "title": "Tourist Destinations",
+    "subtitle": "Discover India's most beautiful places, heritage sites, and hidden gems",
+    "searchPlaceholder": "Search destinations by name...",
+    "filter": "Filter",
+    "categories": {
+      "all": "All Categories",
+      "heritage": "Heritage",
+      "nature": "Nature",
+      "adventure": "Adventure",
+      "religious": "Religious",
+      "beach": "Beach",
+      "hillStation": "Hill Station",
+      "wildlife": "Wildlife"
+    },
+    "noResults": "No destinations found",
+    "rating": "Rating",
+    "bestTime": "Best Time to Visit",
+    "entryFee": "Entry Fee",
+    "timings": "Timings",
+    "nearbyAttractions": "Nearby Attractions"
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "email": "Email Address",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "username": "Username",
+    "forgotPassword": "Forgot Password?",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "welcomeBack": "Welcome Back",
+    "createAccount": "Create Account"
+  },
+  "admin": {
+    "dashboard": "Dashboard",
+    "manageStates": "Manage States",
+    "manageDestinations": "Manage Destinations",
+    "categories": "Categories",
+    "addNew": "Add New",
+    "edit": "Edit",
+    "delete": "Delete",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirmDelete": "Are you sure you want to delete"
+  },
+  "booking": {
+    "planYourJourney": "Plan Your Journey",
+    "bookFlights": "Book flights, trains, buses & more",
+    "flights": "Flights",
+    "trains": "Trains",
+    "buses": "Buses",
+    "cabs": "Cabs",
+    "accommodations": "Accommodations",
+    "tourPackages": "Tour Packages",
+    "oneWay": "One Way",
+    "roundTrip": "Round Trip",
+    "from": "From",
+    "to": "To",
+    "depart": "Depart",
+    "return": "Return",
+    "travelers": "Travelers",
+    "cabin": "Cabin",
+    "search": "Search"
+  }
+}
