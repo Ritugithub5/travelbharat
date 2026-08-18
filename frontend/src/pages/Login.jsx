@@ -20,7 +20,8 @@ const Login = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  const { login, register } = useSafeAuth();
+  const auth = useSafeAuth();
+  const { login, register } = auth;
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -50,10 +51,14 @@ const Login = () => {
   };
 
   const toggleRememberMe = () => {
-    setRememberMe(!rememberMe);
-    if (!rememberMe) {
+    const newValue = !rememberMe;
+    setRememberMe(newValue);
+    
+    if (newValue) {
+      // Saving email
       localStorage.setItem('rememberedEmail', formData.email);
     } else {
+      // Removing saved email
       localStorage.removeItem('rememberedEmail');
     }
   };
@@ -62,6 +67,8 @@ const Login = () => {
     e.preventDefault();
     setError('');
     setLoading(true);
+
+    console.log('🔍 Attempting login with:', formData.email);
 
     if (!isLogin) {
       if (formData.password !== formData.confirmPassword) {
@@ -79,9 +86,15 @@ const Login = () => {
     try {
       let result;
       if (isLogin) {
+        console.log('📤 Calling login API...');
         result = await login(formData.email, formData.password);
+        console.log('📥 Login response:', result);
+        
+        // Save email if remember me is checked and login successful
         if (result.success && rememberMe) {
           localStorage.setItem('rememberedEmail', formData.email);
+        } else if (result.success && !rememberMe) {
+          localStorage.removeItem('rememberedEmail');
         }
       } else {
         result = await register({
@@ -92,11 +105,14 @@ const Login = () => {
       }
 
       if (result.success) {
+        console.log('✅ Login successful, navigating to home...');
         navigate('/');
       } else {
+        console.log('❌ Login failed:', result.message);
         setError(result.message);
       }
     } catch (err) {
+      console.error('❌ Login error:', err);
       setError('An unexpected error occurred');
     } finally {
       setLoading(false);
@@ -208,7 +224,6 @@ const Login = () => {
             </div>
           )}
 
-          {/* Remember Me - Only for Login */}
           {isLogin && (
             <div className="flex items-center justify-between">
               <button
@@ -227,7 +242,6 @@ const Login = () => {
                 type="button"
                 className="text-sm text-orange-500 hover:text-orange-600 transition font-medium"
                 onClick={() => {
-                  // Forgot password functionality
                   alert('Please contact support to reset your password.');
                 }}
               >
@@ -279,7 +293,6 @@ const Login = () => {
           </button>
         </div>
 
-        {/* Demo Credentials */}
         {isLogin && (
           <div className="mt-4 text-center text-xs text-gray-400 border-t pt-4">
             <p>Demo: admin@travelbharat.com / admin123</p>
