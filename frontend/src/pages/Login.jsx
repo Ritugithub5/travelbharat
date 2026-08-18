@@ -1,7 +1,7 @@
 // frontend/src/pages/Login.jsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { FaUser, FaLock, FaEnvelope, FaArrowRight } from 'react-icons/fa';
+import { FaUser, FaLock, FaEnvelope, FaArrowRight, FaEye, FaEyeSlash, FaCheckSquare, FaSquare } from 'react-icons/fa';
 import { useSafeAuth } from '../context/AuthContext';
 
 const Login = () => {
@@ -14,6 +14,9 @@ const Login = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -24,11 +27,35 @@ const Login = () => {
     if (params.get('register') === 'true') {
       setIsLogin(false);
     }
+    
+    // Load saved email if remember me was checked
+    const savedEmail = localStorage.getItem('rememberedEmail');
+    if (savedEmail) {
+      setFormData(prev => ({ ...prev, email: savedEmail }));
+      setRememberMe(true);
+    }
   }, [location]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setError('');
+  };
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const toggleConfirmPasswordVisibility = () => {
+    setShowConfirmPassword(!showConfirmPassword);
+  };
+
+  const toggleRememberMe = () => {
+    setRememberMe(!rememberMe);
+    if (!rememberMe) {
+      localStorage.setItem('rememberedEmail', formData.email);
+    } else {
+      localStorage.removeItem('rememberedEmail');
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -53,6 +80,9 @@ const Login = () => {
       let result;
       if (isLogin) {
         result = await login(formData.email, formData.password);
+        if (result.success && rememberMe) {
+          localStorage.setItem('rememberedEmail', formData.email);
+        }
       } else {
         result = await register({
           username: formData.username,
@@ -133,15 +163,22 @@ const Login = () => {
             <div className="relative">
               <FaLock className="absolute left-3 top-3 text-gray-400" />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 name="password"
                 required
                 value={formData.password}
                 onChange={handleChange}
-                className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+                className="w-full pl-10 pr-12 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
                 placeholder={isLogin ? 'Enter your password' : 'Create a password'}
                 minLength={6}
               />
+              <button
+                type="button"
+                onClick={togglePasswordVisibility}
+                className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 transition"
+              >
+                {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+              </button>
             </div>
           </div>
 
@@ -151,16 +188,51 @@ const Login = () => {
               <div className="relative">
                 <FaLock className="absolute left-3 top-3 text-gray-400" />
                 <input
-                  type="password"
+                  type={showConfirmPassword ? "text" : "password"}
                   name="confirmPassword"
                   required={!isLogin}
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  className="w-full pl-10 pr-12 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-400"
                   placeholder="Confirm your password"
                   minLength={6}
                 />
+                <button
+                  type="button"
+                  onClick={toggleConfirmPasswordVisibility}
+                  className="absolute right-3 top-3 text-gray-400 hover:text-gray-600 transition"
+                >
+                  {showConfirmPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                </button>
               </div>
+            </div>
+          )}
+
+          {/* Remember Me - Only for Login */}
+          {isLogin && (
+            <div className="flex items-center justify-between">
+              <button
+                type="button"
+                onClick={toggleRememberMe}
+                className="flex items-center gap-2 text-sm text-gray-600 hover:text-orange-600 transition"
+              >
+                {rememberMe ? (
+                  <FaCheckSquare className="text-orange-500 text-lg" />
+                ) : (
+                  <FaSquare className="text-gray-400 text-lg" />
+                )}
+                <span>Remember Me</span>
+              </button>
+              <button
+                type="button"
+                className="text-sm text-orange-500 hover:text-orange-600 transition font-medium"
+                onClick={() => {
+                  // Forgot password functionality
+                  alert('Please contact support to reset your password.');
+                }}
+              >
+                Forgot Password?
+              </button>
             </div>
           )}
 
@@ -173,8 +245,17 @@ const Login = () => {
                 : 'bg-gradient-to-r from-orange-500 to-orange-600 hover:shadow-lg'
             }`}
           >
-            {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}
-            {!loading && <FaArrowRight />}
+            {loading ? (
+              <>
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                Processing...
+              </>
+            ) : (
+              <>
+                {isLogin ? 'Sign In' : 'Create Account'}
+                <FaArrowRight />
+              </>
+            )}
           </button>
         </form>
 
@@ -197,6 +278,13 @@ const Login = () => {
               : 'Already have an account? Sign in'}
           </button>
         </div>
+
+        {/* Demo Credentials */}
+        {isLogin && (
+          <div className="mt-4 text-center text-xs text-gray-400 border-t pt-4">
+            <p>Demo: admin@travelbharat.com / admin123</p>
+          </div>
+        )}
       </div>
     </div>
   );
