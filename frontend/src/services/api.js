@@ -1,11 +1,8 @@
 // frontend/src/services/api.js
 import axios from 'axios';
 
-// Use environment variable with fallback for local development
-// REACT_APP_API_URL should be set in .env.production for Render
-export const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-
-console.log('🔍 API URL:', API_URL); // Debug log to see which URL is being used
+// HARDCODE YOUR DEPLOYED BACKEND URL - THIS IS THE SIMPLE FIX
+export const API_URL = 'https://travelbharat-073a.onrender.com/api';
 
 const api = axios.create({
   baseURL: API_URL,
