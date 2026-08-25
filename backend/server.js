@@ -1,4 +1,4 @@
-// backend/server.js - COMPLETE WORKING SOLUTION
+// backend/server.js
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -12,13 +12,15 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+console.log('🟢 Starting server...');
+
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/travelbharat_db')
   .then(() => console.log('✅ MongoDB connected'))
   .catch(err => console.log('❌ MongoDB error:', err.message));
 
 // ============================================
-// USER SCHEMA & MODEL
+// USER SCHEMA
 // ============================================
 const userSchema = new mongoose.Schema({
   username: String,
@@ -38,6 +40,7 @@ const User = mongoose.model('User', userSchema);
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { username, email, password } = req.body;
+    console.log('📝 Register attempt:', email);
     
     const existing = await User.findOne({ email });
     if (existing) {
@@ -60,21 +63,29 @@ app.post('/api/auth/register', async (req, res) => {
       user: { id: user._id, username, email, role: user.role } 
     });
   } catch (error) {
+    console.error('Register error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
 
-// LOGIN
+// LOGIN - FIXED
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
+    console.log('🔑 Login attempt:', email);
     
     const user = await User.findOne({ email });
     if (!user) {
+      console.log('❌ User not found:', email);
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
     
+    console.log('👤 User found:', user.email);
+    console.log('🔒 Password hash:', user.password);
+    
     const isMatch = await bcrypt.compare(password, user.password);
+    console.log('✅ Password match:', isMatch);
+    
     if (!isMatch) {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
@@ -85,12 +96,14 @@ app.post('/api/auth/login', async (req, res) => {
       { expiresIn: '7d' }
     );
     
+    console.log('✅ Login successful for:', email);
     res.json({ 
       success: true, 
       token, 
       user: { id: user._id, username: user.username, email: user.email, role: user.role } 
     });
   } catch (error) {
+    console.error('Login error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });
@@ -166,8 +179,8 @@ app.get('/api/health', (req, res) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`\n🚀 Server running on port ${PORT}`);
-  console.log(`✅ POST /api/auth/register`);
   console.log(`✅ POST /api/auth/login`);
+  console.log(`✅ POST /api/auth/register`);
   console.log(`✅ GET  /api/states`);
   console.log(`✅ GET  /api/experiences`);
   console.log(`✅ GET  /api/test`);
