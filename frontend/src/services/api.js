@@ -1,8 +1,11 @@
 // frontend/src/services/api.js
 import axios from 'axios';
 
-// Export the API_URL so it can be imported elsewhere
-export const API_URL = 'http://localhost:5000/api';
+// Use environment variable with fallback for local development
+// REACT_APP_API_URL should be set in .env.production for Render
+export const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+
+console.log('🔍 API URL:', API_URL); // Debug log to see which URL is being used
 
 const api = axios.create({
   baseURL: API_URL,
