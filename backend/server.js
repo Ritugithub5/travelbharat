@@ -3,53 +3,64 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const path = require('path');
 
 dotenv.config();
 
 const app = express();
 
-// Middleware - Updated CORS with all possible frontend ports
+// ============================================
+// CORS CONFIGURATION
+// ============================================
 app.use(cors({
   origin: [
-    'http://localhost:3000', 
-    'http://localhost:3001', 
-    'http://localhost:3002', 
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:3002',
     'http://localhost:3003',
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:3001',
-    'http://127.0.0.1:3002',
-    'http://127.0.0.1:3003'
+    'https://travelbharat-frontend-am5f.onrender.com',
+    'https://travelbharat-frontend.onrender.com',
+    'https://travelbharat-073a.onrender.com',
+    '*'
   ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/travelbharat_db', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => console.log('✅ MongoDB connected successfully'))
-.catch(err => console.error('❌ MongoDB connection error:', err));
+// ============================================
+// MONGODB CONNECTION
+// ============================================
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/travelbharat_db')
+  .then(() => console.log('✅ MongoDB connected successfully'))
+  .catch(err => console.error('❌ MongoDB connection error:', err));
 
 // ============================================
-// Routes
+// ROUTES
 // ============================================
+
+// Auth Routes
 app.use('/api/auth', require('./src/routes/authRoutes'));
+
+// State Routes
 app.use('/api/states', require('./src/routes/stateRoutes'));
+
+// Experience Routes
 app.use('/api/experiences', require('./src/routes/experienceRoutes'));
+
+// Review Routes
 app.use('/api/reviews', require('./src/routes/reviewRoutes'));
+
+// Contact Routes
 app.use('/api/contact', require('./src/routes/contactRoutes'));
 
 // ============================================
-// Additional API Routes (must come before /:id)
+// ADDITIONAL API ROUTES
 // ============================================
 
-// GET featured experiences (Public)
+// GET featured experiences
 app.get('/api/experiences/featured', async (req, res) => {
   try {
     const Experience = require('./src/models/Experience');
@@ -69,7 +80,7 @@ app.get('/api/experiences/featured', async (req, res) => {
   }
 });
 
-// GET categories (Public)
+// GET categories
 app.get('/api/experiences/categories', async (req, res) => {
   try {
     const Experience = require('./src/models/Experience');
@@ -85,7 +96,7 @@ app.get('/api/experiences/categories', async (req, res) => {
   }
 });
 
-// GET latest contact info (Public)
+// GET latest contact info
 app.get('/api/contact/latest', async (req, res) => {
   try {
     const Contact = require('./src/models/Contact');
@@ -107,7 +118,7 @@ app.get('/api/contact/latest', async (req, res) => {
 });
 
 // ============================================
-// Test and Health Routes
+// TEST ROUTES
 // ============================================
 
 // Test route
@@ -118,8 +129,10 @@ app.get('/api/test', (req, res) => {
     timestamp: new Date().toISOString(),
     endpoints: {
       auth: '/api/auth',
-      experiences: '/api/experiences',
+      login: '/api/auth/login',
+      register: '/api/auth/register',
       states: '/api/states',
+      experiences: '/api/experiences',
       reviews: '/api/reviews',
       contact: '/api/contact',
       test: '/api/test',
@@ -128,7 +141,7 @@ app.get('/api/test', (req, res) => {
   });
 });
 
-// Health check route
+// Health check
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'healthy',
@@ -138,11 +151,40 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Debug route - shows all registered routes
+app.get('/api/debug', (req, res) => {
+  const routes = [];
+  app._router.stack.forEach((middleware) => {
+    if (middleware.route) {
+      const methods = Object.keys(middleware.route.methods).join(', ').toUpperCase();
+      routes.push({
+        path: middleware.route.path,
+        methods: methods
+      });
+    }
+  });
+  res.json({
+    success: true,
+    message: 'All registered routes',
+    routes: routes,
+    mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+  });
+});
+
 // ============================================
-// Error Handling
+// ERROR HANDLING - MUST BE LAST
 // ============================================
 
-// Error handling middleware
+// 404 handler
+app.use((req, res) => {
+  console.log(`❌ 404: ${req.method} ${req.originalUrl}`);
+  res.status(404).json({
+    success: false,
+    message: `Route ${req.originalUrl} not found`
+  });
+});
+
+// Error handler
 app.use((err, req, res, next) => {
   console.error('❌ Error:', err);
   res.status(err.status || 500).json({
@@ -152,16 +194,8 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: `Route ${req.originalUrl} not found`
-  });
-});
-
 // ============================================
-// Start Server
+// START SERVER
 // ============================================
 
 const PORT = process.env.PORT || 5000;
@@ -169,11 +203,13 @@ app.listen(PORT, () => {
   console.log(`\n🚀 Server running on port ${PORT}`);
   console.log(`📡 Test: http://localhost:${PORT}/api/test`);
   console.log(`📡 Health: http://localhost:${PORT}/api/health`);
+  console.log(`📡 Debug: http://localhost:${PORT}/api/debug`);
   console.log(`\n📡 API Endpoints:`);
-  console.log(`   - Auth: http://localhost:${PORT}/api/auth`);
-  console.log(`   - States: http://localhost:${PORT}/api/states`);
-  console.log(`   - Experiences: http://localhost:${PORT}/api/experiences`);
-  console.log(`   - Reviews: http://localhost:${PORT}/api/reviews`);
-  console.log(`   - Contact: http://localhost:${PORT}/api/contact`);
+  console.log(`   POST /api/auth/register`);
+  console.log(`   POST /api/auth/login`);
+  console.log(`   GET  /api/states`);
+  console.log(`   GET  /api/experiences`);
+  console.log(`   GET  /api/test`);
+  console.log(`   GET  /api/health`);
   console.log(`\n✅ Ready for requests!\n`);
 });
