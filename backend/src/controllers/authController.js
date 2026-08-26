@@ -8,7 +8,7 @@ const generateToken = (user) => {
     { expiresIn: process.env.JWT_EXPIRE || '7d' }
   );
 };
-
+s
 
 exports.register = async (req, res) => {
   try {

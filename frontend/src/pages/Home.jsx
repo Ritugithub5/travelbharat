@@ -189,21 +189,39 @@ const Home = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const fetchData = async () => {
-    try {
-      const [statesRes, expRes] = await Promise.all([
-        axios.get("http://localhost:5000/api/states"),
-        axios.get("http://localhost:5000/api/experiences"),
-      ]);
+  // const fetchData = async () => {
+  //   try {
+  //     const [statesRes, expRes] = await Promise.all([
+  //       axios.get("http://localhost:5000/api/states"),
+  //       axios.get("http://localhost:5000/api/experiences"),
+  //     ]);
 
-      setStates(statesRes.data?.states || statesRes.data?.data || []);
-      setExperiences(expRes.data?.experiences || expRes.data?.data || []);
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-      setLoading(false);
-    }
-  };
+  //     setStates(statesRes.data?.states || statesRes.data?.data || []);
+  //     setExperiences(expRes.data?.experiences || expRes.data?.data || []);
+  //     setLoading(false);
+  //   } catch (error) {
+  //     console.error("Error fetching data:", error);
+  //     setLoading(false);
+  //   }
+  // };
+
+  const fetchData = async () => {
+  try {
+    const API_URL = import.meta.env.VITE_API_URL;
+
+    const [statesRes, expRes] = await Promise.all([
+      axios.get(`${API_URL}/states`),
+      axios.get(`${API_URL}/experiences`),
+    ]);
+
+    setStates(statesRes.data?.states || statesRes.data?.data || []);
+    setExperiences(expRes.data?.experiences || expRes.data?.data || []);
+    setLoading(false);
+  } catch (error) {
+    console.error("Error fetching data:", error);
+    setLoading(false);
+  }
+};
 
   const goToSlide = (index) => {
     setCurrentSlide(index);
