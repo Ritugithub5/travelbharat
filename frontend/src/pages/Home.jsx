@@ -13,6 +13,7 @@ import axios from "axios";
 import { ChevronDown, X } from "lucide-react";
 import { Helmet } from "react-helmet";
 import Map from "../components/Map";
+import api from "../services/api";
 
 // Import images
 import t1 from "../videos/t1.png";
@@ -207,15 +208,23 @@ const Home = () => {
 
   const fetchData = async () => {
   try {
-    const API_URL = import.meta.env.VITE_API_URL;
-
     const [statesRes, expRes] = await Promise.all([
-      axios.get(`${API_URL}/states`),
-      axios.get(`${API_URL}/experiences`),
+      api.get("/states"),
+      api.get("/experiences"),
     ]);
 
-    setStates(statesRes.data?.states || statesRes.data?.data || []);
-    setExperiences(expRes.data?.experiences || expRes.data?.data || []);
+    setStates(
+      statesRes.data?.states ||
+      statesRes.data?.data ||
+      []
+    );
+
+    setExperiences(
+      expRes.data?.experiences ||
+      expRes.data?.data ||
+      []
+    );
+
     setLoading(false);
   } catch (error) {
     console.error("Error fetching data:", error);
