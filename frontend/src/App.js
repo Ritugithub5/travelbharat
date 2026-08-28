@@ -1,10 +1,10 @@
 // frontend/src/App.js
-import React, { useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import { AppProvider } from './context/AppContext';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider } from './context/AuthContext'; // Make sure this is imported
 import Home from './pages/Home';
 import States from './pages/States';
 import StateDetail from './pages/StateDetail';
@@ -47,22 +47,11 @@ import Meghalaya from './pages/Meghalaya';
 import MadhyaPradesh from './pages/MadhyaPradesh';
 import Maharashtra from './pages/Maharashtra';
 import Gujarat from './pages/Gujarat';
-import { syncStaticDataToMongoDB } from './services/syncData';
 import './App.css';
 
 function App() {
-  // Sync static data to MongoDB on app start
-  useEffect(() => {
-    const syncData = async () => {
-      const result = await syncStaticDataToMongoDB();
-      if (result.synced) {
-        console.log(`📊 Synced ${result.count} static items to MongoDB`);
-      }
-    };
-    syncData();
-  }, []);
-
   return (
+    // IMPORTANT: Wrap everything with AuthProvider and AppProvider
     <AuthProvider>
       <AppProvider>
         <Router>
@@ -101,7 +90,7 @@ function App() {
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/TamilNadu" element={<TamilNadu />} />
                 <Route path="/Kashmir" element={<Kashmir />} />
-                <Route path="/Telangana" element={<Telangana />} />
+                <Route path ="/Telangana" element={<Telangana />} />
                 <Route path="/HimachalPradesh" element={<HimachalPradesh />}/>
                 <Route path="/Ladakh" element={<Ladakh />}/>
                 <Route path="/WestBengal" element={<WestBengal />}/>
@@ -110,11 +99,7 @@ function App() {
                 <Route path="/MadhyaPradesh" element={<MadhyaPradesh />}/>
                 <Route path="/Maharashtra" element={<Maharashtra />}/>
                 <Route path="/Gujarat" element={<Gujarat />}/>
-                <Route path="/admin" element={
-                  <ProtectedRoute requiredRole="admin">
-                    <Admin />
-                  </ProtectedRoute>
-                } />
+                <Route path="/admin" element={<Admin />} />
                 <Route path="*" element={<Navigate to="/" />} />
               </Routes>
             </main>
