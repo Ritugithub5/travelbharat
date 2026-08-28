@@ -74,51 +74,6 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// ===== NEW: SYNC STATIC DATA TO MONGODB =====
-// POST - Sync static data to MongoDB (Admin only)
-router.post('/sync', auth, authorize('admin'), async (req, res) => {
-  try {
-    const { experiences } = req.body;
-    
-    if (!experiences || !Array.isArray(experiences) || experiences.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid data format. Expected array of experiences.'
-      });
-    }
-    
-    // Check if data already exists
-    const existingCount = await Experience.countDocuments();
-    if (existingCount > 0) {
-      return res.status(200).json({
-        success: true,
-        message: `Data already exists in MongoDB (${existingCount} items). Skipping sync.`,
-        alreadySynced: true,
-        count: existingCount
-      });
-    }
-    
-    // Insert new data
-    const result = await Experience.insertMany(experiences);
-    
-    console.log(`✅ Synced ${result.length} static items to MongoDB`);
-    
-    res.json({
-      success: true,
-      message: `${result.length} items synced successfully!`,
-      count: result.length,
-      synced: true
-    });
-    
-  } catch (error) {
-    console.error('❌ Sync error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to sync data'
-    });
-  }
-});
-
 // POST - Create new experience (Admin only)
 router.post('/', auth, authorize('admin'), async (req, res) => {
   try {
