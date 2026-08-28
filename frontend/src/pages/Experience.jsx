@@ -65,7 +65,6 @@ const Experience = () => {
   };
 
   // ===== ALL EXPERIENCES (ONLY from MongoDB) =====
-  // IMPORTANT: NO STATIC DATA HERE!
   const allExperiences = dbExperiences.map(d => ({
     ...d,
     key: d._id || `db-${Date.now()}`,
@@ -88,10 +87,11 @@ const Experience = () => {
     emergencyContacts: d.emergencyContacts || {}
   }));
 
-  // Get unique categories from MongoDB data only
+  // Get unique categories from MongoDB data - FIXED: Using Array.from()
+  const categorySet = new Set(allExperiences.map(d => d.category).filter(Boolean));
   const categories = [
     { id: 'All', label: 'All', icon: <FaCompass className="text-gray-600" /> },
-    ...new Set(allExperiences.map(d => d.category).filter(Boolean)).map(cat => ({
+    ...Array.from(categorySet).map(cat => ({
       id: cat,
       label: cat,
       icon: <FaCompass className="text-orange-500" />
@@ -106,17 +106,14 @@ const Experience = () => {
     return matchesSearch && matchesCategory;
   });
 
-  // Toggle like
   const toggleLike = (key) => {
     setIsLiked(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  // Toggle bookmark
   const toggleBookmark = (key) => {
     setIsBookmarked(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  // Handle click
   const handleExperienceClick = (dest) => {
     if (dest.page && dest.page !== 'experience') {
       navigate(`/${dest.page}`, { state: { selected: [dest.subCategory] } });
@@ -219,7 +216,6 @@ const Experience = () => {
           </div>
         </div>
 
-        {/* Rest of the details view... */}
         <div className="max-w-7xl mx-auto px-4 py-12">
           <div className="grid lg:grid-cols-12 gap-12">
             <div className="lg:col-span-8 space-y-12">
