@@ -65,10 +65,12 @@ const Experience = () => {
   };
 
   // ===== ALL EXPERIENCES (ONLY from MongoDB) =====
+  // IMPORTANT: NO STATIC DATA HERE!
   const allExperiences = dbExperiences.map(d => ({
     ...d,
     key: d._id || `db-${Date.now()}`,
     subCategory: d.category || 'Experience',
+    category: d.category || 'Experience',
     page: d.page || 'experience',
     icon: <FaCompass className="text-orange-500" />,
     gradient: 'from-orange-400 to-red-600',
@@ -86,7 +88,7 @@ const Experience = () => {
     emergencyContacts: d.emergencyContacts || {}
   }));
 
-  // Get unique categories from MongoDB data
+  // Get unique categories from MongoDB data only
   const categories = [
     { id: 'All', label: 'All', icon: <FaCompass className="text-gray-600" /> },
     ...new Set(allExperiences.map(d => d.category).filter(Boolean)).map(cat => ({
@@ -96,6 +98,7 @@ const Experience = () => {
     }))
   ];
 
+  // Filter experiences
   const filteredExperiences = allExperiences.filter(dest => {
     const matchesSearch = dest.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       dest.state?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -103,14 +106,17 @@ const Experience = () => {
     return matchesSearch && matchesCategory;
   });
 
+  // Toggle like
   const toggleLike = (key) => {
     setIsLiked(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
+  // Toggle bookmark
   const toggleBookmark = (key) => {
     setIsBookmarked(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
+  // Handle click
   const handleExperienceClick = (dest) => {
     if (dest.page && dest.page !== 'experience') {
       navigate(`/${dest.page}`, { state: { selected: [dest.subCategory] } });
@@ -213,6 +219,7 @@ const Experience = () => {
           </div>
         </div>
 
+        {/* Rest of the details view... */}
         <div className="max-w-7xl mx-auto px-4 py-12">
           <div className="grid lg:grid-cols-12 gap-12">
             <div className="lg:col-span-8 space-y-12">
@@ -224,7 +231,7 @@ const Experience = () => {
 
               <div>
                 <h2 className="text-3xl font-bold text-gray-800 mb-6">
-                  Discovering {dest.state}'s {isEco ? 'Sustainable' : isBird ? 'Avian' : 'Wild'} Side
+                  Discovering {dest.state}'s Side
                 </h2>
                 <div className="grid md:grid-cols-2 gap-8">
                   <div className="space-y-4">
@@ -268,21 +275,6 @@ const Experience = () => {
                   <div className="rounded-2xl overflow-hidden shadow-xl">
                     <img src={bestTimeImage} alt={dest.name} className="w-full h-48 object-cover" />
                   </div>
-                </div>
-              </div>
-
-              <div>
-                <h2 className="text-3xl font-bold text-gray-800 mb-6">
-                  {isEco ? '🌱 Sustainable Practices' : isBird ? '🐦 Bird Species' : '🦁 Wildlife Species'}
-                </h2>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {(isEco ? dest.ecoPractices : isBird ? dest.birdSpecies : dest.wildlifeSpecies)?.map((item, index) => (
-                    <div key={index} className="text-center p-4 bg-white rounded-2xl border border-gray-100 hover:shadow-xl transition hover:-translate-y-1">
-                      <div className="text-4xl mb-2">{item.emoji}</div>
-                      <p className="font-semibold text-sm">{item.name}</p>
-                      <p className="text-xs text-gray-500 mt-1">{item.description}</p>
-                    </div>
-                  ))}
                 </div>
               </div>
 
@@ -410,7 +402,7 @@ const Experience = () => {
             <div className="flex-1 relative">
               <input
                 type="text"
-                placeholder="Search experiences by name or state..."
+                placeholder="Search experiences..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full px-5 py-3 pl-12 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition"
@@ -448,11 +440,9 @@ const Experience = () => {
 
       {/* Results */}
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
-          <p className="text-gray-600 font-medium">
-            Showing <span className="text-orange-500 font-bold">{filteredExperiences.length}</span> experiences
-          </p>
-        </div>
+        <p className="text-gray-600 font-medium mb-6">
+          Showing <span className="text-orange-500 font-bold">{filteredExperiences.length}</span> experiences
+        </p>
 
         {filteredExperiences.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-3xl shadow-sm border border-gray-100">
