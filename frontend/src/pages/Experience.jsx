@@ -11,6 +11,8 @@ import {
   FaPaw, FaLeaf, FaFeather, FaWater, FaSun, FaMoon,
   FaCloudSun, FaWind, FaSnowflake
 } from 'react-icons/fa';
+import { useTranslation } from 'react-i18next';
+ 
 import { wildlifeDestinations } from '../data/wildlifeDestinations';
 import { birdsDestinations } from '../data/birdsDestinations';
 import { EcoTourismPage } from '../data/ecoData'; 
@@ -632,4 +634,4 @@ const Experience = () => {
   );
 };
 
-export default Experience;   
+export default Experience;
