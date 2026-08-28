@@ -25,7 +25,7 @@ import t6 from "../videos/t6.png";
 import t7 from "../videos/t7.png";
 import t8 from "../videos/t8.png";
 import t9 from "../videos/t9.png";
-import t104 from '../videos/t104.png';
+import t104 from "../videos/t104.png";
 import claySculptureImg from "../videos/t65.png";
 import handloomImg from "../videos/t67.png";
 
@@ -85,16 +85,16 @@ const Home = () => {
   // State page mapping
   const statePageMap = {
     "Himachal Pradesh": "/HimachalPradesh",
-    "Ladakh": "/Ladakh",
+    Ladakh: "/Ladakh",
     "Tamil Nadu": "/TamilNadu",
-    "Telangana": "/Telangana",
+    Telangana: "/Telangana",
     "West Bengal": "/WestBengal",
-    "Odisha": "/Odisha",
+    Odisha: "/Odisha",
     "Madhya Pradesh": "/MadhyaPradesh",
-    "Maharashtra": "/Maharashtra",
-    "Gujarat": "/Gujarat",
-    "Kashmir": "/Kashmir",
-    "Meghalaya": "/Meghalaya",
+    Maharashtra: "/Maharashtra",
+    Gujarat: "/Gujarat",
+    Kashmir: "/Kashmir",
+    Meghalaya: "/Meghalaya",
   };
 
   // Experience page mapping
@@ -104,10 +104,10 @@ const Home = () => {
     "Eco Tourism": "/EcoTourismPage",
     "Museums & Art & Craft": "/ArtGallery",
     "Water & Mountain": "/WaterMountainSection",
-    "Spiritual": "/Spiritual",
-    "Wellness": "/Wellness",
+    Spiritual: "/Spiritual",
+    Wellness: "/Wellness",
     "Luxury Travel": "/LuxuryTravel",
-    "Culinary": "/Culinary",
+    Culinary: "/Culinary",
   };
 
   // Interests
@@ -193,12 +193,14 @@ const Home = () => {
   // const fetchData = async () => {
   //   try {
   //     const [statesRes, expRes] = await Promise.all([
-  //       axios.get("http://localhost:5000/api/states"),
-  //       axios.get("http://localhost:5000/api/experiences"),
+  //       api.get("/states"),
+  //       api.get("/experiences"),
   //     ]);
 
   //     setStates(statesRes.data?.states || statesRes.data?.data || []);
+
   //     setExperiences(expRes.data?.experiences || expRes.data?.data || []);
+
   //     setLoading(false);
   //   } catch (error) {
   //     console.error("Error fetching data:", error);
@@ -207,31 +209,58 @@ const Home = () => {
   // };
 
   const fetchData = async () => {
-  try {
-    const [statesRes, expRes] = await Promise.all([
-      api.get("/states"),
-      api.get("/experiences"),
-    ]);
+  setLoading(true);
 
-    setStates(
+  // Fetch states independently
+  try {
+    const statesRes = await api.get("/states");
+
+    console.log("✅ STATES API:", statesRes.status, statesRes.data);
+
+    const statesData =
       statesRes.data?.states ||
       statesRes.data?.data ||
-      []
+      (Array.isArray(statesRes.data) ? statesRes.data : []);
+
+    setStates(Array.isArray(statesData) ? statesData : []);
+  } catch (error) {
+    console.error(
+      "❌ STATES API ERROR:",
+      error.response?.status,
+      error.response?.data || error.message
     );
 
-    setExperiences(
+    setStates([]);
+  }
+
+  // Fetch experiences independently
+  try {
+    const expRes = await api.get("/experiences");
+
+    console.log("✅ EXPERIENCES API:", expRes.status, expRes.data);
+
+    const experiencesData =
       expRes.data?.experiences ||
       expRes.data?.data ||
-      []
+      (Array.isArray(expRes.data) ? expRes.data : []);
+
+    console.log("📍 FINAL EXPERIENCES:", experiencesData);
+
+    setExperiences(
+      Array.isArray(experiencesData) ? experiencesData : []
+    );
+  } catch (error) {
+    console.error(
+      "❌ EXPERIENCES API ERROR:",
+      error.response?.status,
+      error.response?.data || error.message
     );
 
-    setLoading(false);
-  } catch (error) {
-    console.error("Error fetching data:", error);
-    setLoading(false);
+    setExperiences([]);
   }
-};
 
+  setLoading(false);
+};
   const goToSlide = (index) => {
     setCurrentSlide(index);
   };
@@ -250,7 +279,7 @@ const Home = () => {
 
   const handleSelection = (item) => {
     setSelected((prev) =>
-      prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]
+      prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item],
     );
   };
 
@@ -267,7 +296,10 @@ const Home = () => {
 
       <div className="animate-fade-in">
         {/* ===== HERO SLIDER ===== */}
-        <section className="relative w-full bg-black" style={{ height: "80vh" }}>
+        <section
+          className="relative w-full bg-black"
+          style={{ height: "80vh" }}
+        >
           <div className="relative w-full h-full overflow-hidden">
             {slides.map((slide, index) => (
               <div
@@ -433,9 +465,7 @@ const Home = () => {
                     <p className="uppercase tracking-[5px] text-gray-500 text-sm mb-4">
                       {item.place}
                     </p>
-                    <h4 className="text-2xl leading-snug mb-6">
-                      {item.title}
-                    </h4>
+                    <h4 className="text-2xl leading-snug mb-6">{item.title}</h4>
                     {item.link ? (
                       <Link
                         to={item.link}
@@ -656,7 +686,7 @@ const Home = () => {
                 onClick={() => {
                   if (selected.length > 0) {
                     const experienceItem = selected.find(
-                      (item) => experiencePageMap[item]
+                      (item) => experiencePageMap[item],
                     );
                     if (experienceItem) {
                       navigate(experiencePageMap[experienceItem]);
@@ -682,7 +712,7 @@ const Home = () => {
                 onClick={() => {
                   if (selected.length > 0) {
                     const stateItem = selected.find(
-                      (item) => statePageMap[item]
+                      (item) => statePageMap[item],
                     );
                     if (stateItem) {
                       navigate(statePageMap[stateItem]);
@@ -762,7 +792,7 @@ const Home = () => {
                     ].map((stat, index) => (
                       <div key={index}>
                         <p className="text-xl sm:text-2xl font-bold text-white">
-                          {loading ? '...' : stat.value}
+                          {loading ? "..." : stat.value}
                         </p>
                         <p className="text-[10px] sm:text-xs text-white/50 uppercase tracking-wider">
                           {stat.label}
