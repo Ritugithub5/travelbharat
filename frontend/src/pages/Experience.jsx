@@ -11,6 +11,18 @@ import {
   FaPaw, FaLeaf, FaFeather, FaWater, FaSun, FaMoon,
   FaCloudSun, FaWind, FaSnowflake
 } from 'react-icons/fa';
+import { useTranslation } from 'react-i18next';
+ 
+// ===== STATIC DATA IMPORTS (Your Original Data) =====
+import { wildlifeDestinations } from '../data/wildlifeDestinations';
+import { birdsDestinations } from '../data/birdsDestinations';
+import { EcoTourismPage } from '../data/ecoData'; 
+import { ArtGallery } from '../data/artGalleryData';
+import { waterMountainSection } from '../data/waterMountainData';
+import { Spiritual } from '../data/Spiritual';
+import { Wellness } from '../data/wellnessDestinations'; 
+import { LuxuryTravel, allLuxuryDestinations } from '../data/luxuryDestinations';
+import { Culinary } from '../data/culinaryDestinations';
 import api from '../services/api';
 
 // ===== IMPORT ALL IMAGES =====
@@ -35,76 +47,155 @@ const Experience = () => {
   const [showDetails, setShowDetails] = useState(false);
   const [isLiked, setIsLiked] = useState({});
   const [isBookmarked, setIsBookmarked] = useState({});
-  
-  // State for MongoDB data
-  const [dbExperiences, setDbExperiences] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [dataInitialized, setDataInitialized] = useState(false);
 
-  // Fetch data from MongoDB ONLY
-  useEffect(() => {
-    fetchFromMongoDB();
-  }, []);
+  // ===== STATIC DATA (YOUR ORIGINAL DATA) =====
+  const staticExperiences = [
+    { 
+      ...wildlifeDestinations.india, key: 'wildlife', subCategory: 'Wildlife Safari', page: 'wildlife',
+      icon: <FaPaw className="text-emerald-500" />, gradient: 'from-emerald-500 to-green-600',
+      bgColor: 'bg-emerald-50', borderColor: 'border-emerald-200', textColor: 'text-emerald-600',
+      coverImage: t11,
+      category: 'Wildlife'
+    },
+    { 
+      ...birdsDestinations.india, key: 'birds', subCategory: 'Bird Watching', page: 'birds',
+      icon: <FaFeather className="text-blue-500" />, gradient: 'from-blue-400 to-cyan-600',
+      bgColor: 'bg-blue-50', borderColor: 'border-blue-200', textColor: 'text-blue-600',
+      coverImage: t14,
+      category: 'Bird Watching'
+    },
+    { 
+      ...EcoTourismPage.india, key: 'eco', subCategory: 'Eco Tourism', page: 'EcoTourismPage',
+      icon: <FaLeaf className="text-green-500" />, gradient: 'from-green-400 to-emerald-600',
+      bgColor: 'bg-green-50', borderColor: 'border-green-200', textColor: 'text-green-600',
+      coverImage: t18,
+      category: 'Eco Tourism'
+    },
+    { 
+      ...ArtGallery.india, key: 'art', subCategory: 'Art Gallery', page: 'ArtGallery',
+      icon: <FaPalette className="text-purple-500" />, gradient: 'from-purple-400 to-pink-600',
+      bgColor: 'bg-purple-50', borderColor: 'border-purple-200', textColor: 'text-purple-600',
+      coverImage: t12,
+      category: 'Art Gallery'
+    },
+    { 
+      ...waterMountainSection.india, key: 'water-mountain', subCategory: 'Water & Mountain', page: 'WaterMountainSection',
+      icon: <FaMountain className="text-indigo-500" />, gradient: 'from-blue-500 to-indigo-600',
+      bgColor: 'bg-indigo-50', borderColor: 'border-indigo-200', textColor: 'text-indigo-600',
+      coverImage: t21,
+      category: 'Water & Mountain'
+    },
+    { 
+      ...Spiritual.india, key: 'Spiritual', subCategory: 'Spiritual', page: 'Spiritual',
+      icon: <FaDharmachakra className="text-orange-500" />, gradient: 'from-orange-400 to-red-600',
+      bgColor: 'bg-orange-50', borderColor: 'border-orange-200', textColor: 'text-orange-600',
+      coverImage: t13,
+      category: 'Spiritual'
+    },
+    {
+      ...Wellness.india, key: 'Wellness', subCategory: 'Wellness', page: 'Wellness',
+      icon: <FaSpa className="text-teal-500" />, gradient: 'from-teal-400 to-green-600',
+      bgColor: 'bg-teal-50', borderColor: 'border-teal-200', textColor: 'text-teal-600',
+      coverImage: t15,
+      category: 'Wellness'
+    },
+    ...allLuxuryDestinations.map(d => ({ 
+      ...d, key: d.key, subCategory: 'Luxury Travel', page: d.page || 'LuxuryTravel',
+      icon: <FaShip className="text-amber-500" />, gradient: 'from-amber-400 to-orange-600',
+      bgColor: 'bg-amber-50', borderColor: 'border-amber-200', textColor: 'text-amber-600',
+      coverImage: t17,
+      category: 'Luxury Travel'
+    })),
+    {
+      ...Culinary.india, key: 'Culinary', subCategory: 'Culinary', page: 'Culinary',
+      icon: <FaUtensils className="text-red-500" />, gradient: 'from-red-400 to-orange-600',
+      bgColor: 'bg-red-50', borderColor: 'border-red-200', textColor: 'text-red-600',
+      coverImage: t16,
+      category: 'Culinary'
+    }
+  ];
 
-  const fetchFromMongoDB = async () => {
-    setLoading(true);
+  // ===== SYNC STATIC DATA TO MONGODB =====
+  const syncDataToMongoDB = async () => {
     try {
-      const response = await api.get('/experiences?limit=100');
-      if (response.data && response.data.success && response.data.experiences) {
-        setDbExperiences(response.data.experiences);
-        console.log('✅ Loaded from MongoDB:', response.data.experiences.length, 'items');
+      // Check if data already exists in MongoDB
+      const checkResponse = await api.get('/experiences?limit=1');
+      
+      if (checkResponse.data && checkResponse.data.experiences && checkResponse.data.experiences.length > 0) {
+        console.log('✅ Data already exists in MongoDB, skipping sync');
+        setDataInitialized(true);
+        return;
+      }
+
+      console.log('📤 Syncing static data to MongoDB...');
+      
+      // Prepare data for MongoDB
+      const dataToSync = staticExperiences.map(exp => ({
+        name: exp.name || 'Unknown',
+        category: exp.category || exp.subCategory || 'Experience',
+        subCategory: exp.subCategory || exp.category || 'Experience',
+        description: exp.description || '',
+        state: exp.state || 'India',
+        image: exp.coverImage || exp.image || '',
+        rating: exp.rating || 0,
+        reviewCount: exp.reviewCount || 0,
+        bestTimeToVisit: exp.bestTimeToVisit || '',
+        entryFee: exp.entryFee || 'Free',
+        timings: exp.timings || 'Open all days',
+        highlights: exp.highlights || [],
+        isPopular: exp.isPopular || false,
+        isVerified: true,
+        page: exp.page || 'experience'
+      }));
+
+      // Send to MongoDB
+      const response = await api.post('/experiences/sync', { experiences: dataToSync });
+      
+      if (response.data && response.data.success) {
+        console.log('✅ Data synced to MongoDB successfully!');
+        setDataInitialized(true);
       } else {
-        console.log('⚠️ No data in MongoDB');
-        setDbExperiences([]);
+        console.log('⚠️ Failed to sync data to MongoDB');
+        setDataInitialized(true);
       }
     } catch (error) {
-      console.error('❌ Error fetching from MongoDB:', error);
-      setDbExperiences([]);
-    } finally {
-      setLoading(false);
+      console.error('❌ Error syncing data to MongoDB:', error);
+      setDataInitialized(true);
     }
   };
 
-  // ===== ALL EXPERIENCES (ONLY from MongoDB) =====
-  const allExperiences = dbExperiences.map(d => ({
-    ...d,
-    key: d._id || `db-${Date.now()}`,
-    subCategory: d.category || 'Experience',
-    category: d.category || 'Experience',
-    page: d.page || 'experience',
-    icon: <FaCompass className="text-orange-500" />,
-    gradient: 'from-orange-400 to-red-600',
-    bgColor: 'bg-orange-50',
-    borderColor: 'border-orange-200',
-    textColor: 'text-orange-600',
-    coverImage: d.image || t11,
-    state: d.state || 'India',
-    rating: d.rating || 0,
-    reviewCount: d.reviewCount || 0,
-    isPopular: d.isPopular || false,
-    highlights: d.highlights || [],
-    weather: d.weather || {},
-    howToReach: d.howToReach || {},
-    emergencyContacts: d.emergencyContacts || {}
-  }));
+  // ===== FETCH OR USE STATIC DATA =====
+  const [allExperiences, setAllExperiences] = useState(staticExperiences);
 
-  // Get unique categories from MongoDB data - FIXED: Using Array.from()
-  const categorySet = new Set(allExperiences.map(d => d.category).filter(Boolean));
-  const categories = [
-    { id: 'All', label: 'All', icon: <FaCompass className="text-gray-600" /> },
-    ...Array.from(categorySet).map(cat => ({
-      id: cat,
-      label: cat,
-      icon: <FaCompass className="text-orange-500" />
-    }))
-  ];
+  useEffect(() => {
+    syncDataToMongoDB();
+  }, []);
 
-  // Filter experiences
+  // ===== SHOW STATIC DATA (Your original design) =====
+  // We use staticExperiences as the main data source,
+  // and MongoDB sync happens in the background
+
   const filteredExperiences = allExperiences.filter(dest => {
     const matchesSearch = dest.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       dest.state?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = selectedCategory === 'All' || dest.category === selectedCategory;
+    const matchesCategory = selectedCategory === 'All' || dest.subCategory === selectedCategory || dest.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
+
+  const categories = [
+    { id: 'All', label: 'All', icon: <FaCompass className="text-gray-600" /> },
+    { id: 'Wildlife Safari', label: 'Wildlife', icon: <FaPaw className="text-emerald-500" /> },
+    { id: 'Bird Watching', label: 'Birding', icon: <FaFeather className="text-blue-500" /> },
+    { id: 'Eco Tourism', label: 'Eco', icon: <FaLeaf className="text-green-500" /> },
+    { id: 'Art Gallery', label: 'Art', icon: <FaPalette className="text-purple-500" /> },
+    { id: 'Water & Mountain', label: 'Adventure', icon: <FaMountain className="text-indigo-500" /> },
+    { id: 'Spiritual', label: 'Spiritual', icon: <FaDharmachakra className="text-orange-500" /> },
+    { id: 'Wellness', label: 'Wellness', icon: <FaSpa className="text-teal-500" /> },
+    { id: 'Luxury Travel', label: 'Luxury', icon: <FaShip className="text-amber-500" /> },
+    { id: 'Culinary', label: 'Culinary', icon: <FaUtensils className="text-red-500" /> },
+  ];
 
   const toggleLike = (key) => {
     setIsLiked(prev => ({ ...prev, [key]: !prev[key] }));
@@ -133,8 +224,8 @@ const Experience = () => {
   // ===== DETAILS VIEW =====
   if (showDetails && selectedDestination) {
     const dest = selectedDestination;
-    const isBird = dest.category === 'Bird Watching';
-    const isEco = dest.category === 'Eco Tourism';
+    const isBird = dest.subCategory === 'Bird Watching';
+    const isEco = dest.subCategory === 'Eco Tourism';
     const color = isBird ? 'blue' : isEco ? 'emerald' : 'red';
     
     let heroImage, overviewImage, bestTimeImage, galleryImage;
@@ -179,7 +270,7 @@ const Experience = () => {
             <div className="absolute bottom-0 left-0 right-0 p-8 md:p-16 text-white">
               <div className="max-w-4xl mx-auto">
                 <span className={`inline-block bg-${color}-500/30 backdrop-blur-md text-white px-6 py-2 rounded-full text-xs font-bold tracking-widest uppercase border border-white/20 mb-4`}>
-                  ✦ {dest.category} ✦
+                  ✦ {dest.subCategory} ✦
                 </span>
                 <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-4">
                   {dest.name}
@@ -227,7 +318,7 @@ const Experience = () => {
 
               <div>
                 <h2 className="text-3xl font-bold text-gray-800 mb-6">
-                  Discovering {dest.state}'s Side
+                  Discovering {dest.state}'s {isEco ? 'Sustainable' : isBird ? 'Avian' : 'Wild'} Side
                 </h2>
                 <div className="grid md:grid-cols-2 gap-8">
                   <div className="space-y-4">
@@ -271,6 +362,21 @@ const Experience = () => {
                   <div className="rounded-2xl overflow-hidden shadow-xl">
                     <img src={bestTimeImage} alt={dest.name} className="w-full h-48 object-cover" />
                   </div>
+                </div>
+              </div>
+
+              <div>
+                <h2 className="text-3xl font-bold text-gray-800 mb-6">
+                  {isEco ? '🌱 Sustainable Practices' : isBird ? '🐦 Bird Species' : '🦁 Wildlife Species'}
+                </h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {(isEco ? dest.ecoPractices : isBird ? dest.birdSpecies : dest.wildlifeSpecies)?.map((item, index) => (
+                    <div key={index} className="text-center p-4 bg-white rounded-2xl border border-gray-100 hover:shadow-xl transition hover:-translate-y-1">
+                      <div className="text-4xl mb-2">{item.emoji}</div>
+                      <p className="font-semibold text-sm">{item.name}</p>
+                      <p className="text-xs text-gray-500 mt-1">{item.description}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
 
@@ -349,17 +455,6 @@ const Experience = () => {
   }
 
   // ===== GRID VIEW =====
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-white pt-16">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-orange-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading experiences...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white pt-16">
       {/* Hero Section */}
@@ -382,11 +477,9 @@ const Experience = () => {
             <p className="text-lg md:text-xl opacity-90 max-w-2xl mx-auto">
               Curated experiences for every passion and destination across India
             </p>
-            {dbExperiences.length > 0 && (
-              <p className="text-sm opacity-75 mt-2">
-                ✨ {dbExperiences.length} experiences from our community
-              </p>
-            )}
+            <p className="text-xs text-white/50 mt-2">
+              {allExperiences.length} experiences loaded
+            </p>
           </div>
         </div>
       </section>
@@ -398,7 +491,7 @@ const Experience = () => {
             <div className="flex-1 relative">
               <input
                 type="text"
-                placeholder="Search experiences..."
+                placeholder="Search experiences by name or state..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full px-5 py-3 pl-12 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition"
@@ -425,7 +518,7 @@ const Experience = () => {
                       : 'bg-white border-2 border-gray-200 text-gray-600 hover:border-orange-300 hover:text-orange-500'
                   }`}
                 >
-                  <span className="text-lg">{cat.icon}</span>
+                  {cat.icon}
                   {cat.label}
                 </button>
               ))}
@@ -436,9 +529,11 @@ const Experience = () => {
 
       {/* Results */}
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <p className="text-gray-600 font-medium mb-6">
-          Showing <span className="text-orange-500 font-bold">{filteredExperiences.length}</span> experiences
-        </p>
+        <div className="flex items-center justify-between mb-6">
+          <p className="text-gray-600 font-medium">
+            Showing <span className="text-orange-500 font-bold">{filteredExperiences.length}</span> experiences
+          </p>
+        </div>
 
         {filteredExperiences.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-3xl shadow-sm border border-gray-100">
@@ -455,13 +550,13 @@ const Experience = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {filteredExperiences.map((dest) => {
-              const color = dest.category === 'Bird Watching' ? 'blue' 
-                : dest.category === 'Eco Tourism' ? 'emerald' 
-                : dest.category === 'Wellness' ? 'teal'
-                : dest.category === 'Spiritual' ? 'orange'
-                : dest.category === 'Luxury Travel' ? 'amber'
-                : dest.category === 'Culinary' ? 'red'
-                : dest.category === 'Art Gallery' ? 'purple'
+              const color = dest.subCategory === 'Bird Watching' ? 'blue' 
+                : dest.subCategory === 'Eco Tourism' ? 'emerald' 
+                : dest.subCategory === 'Wellness' ? 'teal'
+                : dest.subCategory === 'Spiritual' ? 'orange'
+                : dest.subCategory === 'Luxury Travel' ? 'amber'
+                : dest.subCategory === 'Culinary' ? 'red'
+                : dest.subCategory === 'Art Gallery' ? 'purple'
                 : 'red';
               
               return (
@@ -489,8 +584,13 @@ const Experience = () => {
                     
                     <div className="absolute bottom-3 left-3 flex gap-2">
                       <span className={`bg-${color}-500/90 backdrop-blur text-white text-xs px-3 py-1 rounded-full font-medium`}>
-                        {dest.category}
+                        {dest.subCategory}
                       </span>
+                      {dest.page && dest.page !== 'experience' && (
+                        <span className="bg-black/60 backdrop-blur text-white text-xs px-3 py-1 rounded-full">
+                          🚀 Explore
+                        </span>
+                      )}
                     </div>
                   </div>
                   
