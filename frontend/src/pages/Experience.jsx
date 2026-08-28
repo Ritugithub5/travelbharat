@@ -22,7 +22,6 @@ import { Spiritual } from '../data/Spiritual';
 import { Wellness } from '../data/wellnessDestinations'; 
 import { LuxuryTravel, allLuxuryDestinations } from '../data/luxuryDestinations';
 import { Culinary } from '../data/culinaryDestinations';
-import api from '../services/api';
 
 // ===== IMPORT ALL IMAGES =====
 import t11 from '../videos/t11.png';
@@ -46,34 +45,9 @@ const Experience = () => {
   const [showDetails, setShowDetails] = useState(false);
   const [isLiked, setIsLiked] = useState({});
   const [isBookmarked, setIsBookmarked] = useState({});
-  
-  // State for MongoDB data
-  const [dbExperiences, setDbExperiences] = useState([]);
-  const [loading, setLoading] = useState(false);
 
-  // Fetch data from MongoDB (experiences collection)
-  useEffect(() => {
-    fetchFromMongoDB();
-  }, []);
-
-  const fetchFromMongoDB = async () => {
-    setLoading(true);
-    try {
-      const response = await api.get('/experiences?limit=100');
-      if (response.data && response.data.success && response.data.experiences) {
-        setDbExperiences(response.data.experiences);
-        console.log('✅ Loaded from MongoDB:', response.data.experiences.length, 'items');
-      }
-    } catch (error) {
-      console.error('❌ Error fetching from MongoDB:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // ===== ALL EXPERIENCES =====
-  const allExperiences = [
-    // Static data (fallback)
+  // ===== ALL DESTINATIONS =====
+  const allDestinations = [
     { 
       ...wildlifeDestinations.india, key: 'wildlife', subCategory: 'Wildlife Safari', page: 'wildlife',
       icon: <FaPaw className="text-emerald-500" />, gradient: 'from-emerald-500 to-green-600',
@@ -119,27 +93,6 @@ const Experience = () => {
       icon: <FaUtensils className="text-red-500" />, gradient: 'from-red-400 to-orange-600',
       bgColor: 'bg-red-50', borderColor: 'border-red-200', textColor: 'text-red-600'
     },
-    // MongoDB data converted to same format
-    ...dbExperiences.map(d => ({
-      ...d,
-      key: d._id || `db-${Date.now()}`,
-      subCategory: d.category || 'Experience',
-      page: 'experience',
-      icon: <FaCompass className="text-orange-500" />,
-      gradient: 'from-orange-400 to-red-600',
-      bgColor: 'bg-orange-50',
-      borderColor: 'border-orange-200',
-      textColor: 'text-orange-600',
-      coverImage: d.image || t11,
-      state: d.state || 'India',
-      rating: d.rating || 0,
-      reviewCount: d.reviewCount || 0,
-      isPopular: d.isPopular || false,
-      highlights: d.highlights || [],
-      weather: d.weather || {},
-      howToReach: d.howToReach || {},
-      emergencyContacts: d.emergencyContacts || {}
-    }))
   ];
 
   useEffect(() => {
@@ -185,7 +138,7 @@ const Experience = () => {
     setIsBookmarked(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const filteredExperiences = allExperiences.filter(dest => {
+  const filteredDestinations = allDestinations.filter(dest => {
     const matchesSearch = dest.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       dest.state?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'All' || dest.subCategory === selectedCategory;
@@ -205,7 +158,7 @@ const Experience = () => {
     { id: 'Culinary', label: 'Culinary', icon: <FaUtensils className="text-red-500" /> },
   ];
 
-  const handleExperienceClick = (dest) => {
+  const handleDestinationClick = (dest) => {
     if (dest.page && dest.page !== 'experience') {
       navigate(`/${dest.page}`, { state: { selected: [dest.subCategory] } });
       return;
@@ -241,7 +194,7 @@ const Experience = () => {
       bestTimeImage = t16;
       galleryImage = t17;
     } else {
-      heroImage = dest.coverImage || t11;
+      heroImage = t11;
       overviewImage = t12;
       bestTimeImage = t13;
       galleryImage = t11;
@@ -454,11 +407,11 @@ const Experience = () => {
     );
   }
 
-  // ===== GRID VIEW =====
+  // ===== GRID VIEW - PREMIUM DESIGN =====
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-r from-orange-500 to-red-600">
+      <section className="relative overflow-hidden bg-gradient-to-r from-gray-400 to-red-700">
         <div className="absolute inset-0 opacity-20">
           <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-full blur-3xl"></div>
           <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full blur-3xl"></div>
@@ -467,21 +420,16 @@ const Experience = () => {
         
         <div className="relative max-w-7xl mx-auto px-4 py-16 md:py-20">
           <div className="text-center text-white">
-            <div className="inline-flex items-center gap-3 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full mb-6">
+            <div className="inline-flex items-center gap-3 bg-whitea/20 backdrop-blur-sm px-4 py-2 rounded-full mb-6">
               <FaCompass className="text-xl animate-spin-slow" />
               <span className="text-sm font-medium tracking-wider">EXPLORE EXPERIENCES</span>
             </div>
             <h1 className="text-4xl md:text-6xl font-bold mb-4 tracking-tight">
-              Discover Your <span className="text-yellow-300">Next Adventure</span>
+              Discover Your <span className="text-amber-500">Next Adventure</span>
             </h1>
             <p className="text-lg md:text-xl opacity-90 max-w-2xl mx-auto">
               Curated experiences for every passion and destination across India
             </p>
-            {dbExperiences.length > 0 && (
-              <p className="text-sm opacity-75 mt-2">
-                ✨ {dbExperiences.length} experiences from our community
-              </p>
-            )}
           </div>
         </div>
       </section>
@@ -493,7 +441,7 @@ const Experience = () => {
             <div className="flex-1 relative">
               <input
                 type="text"
-                placeholder="Search experiences by name or state..."
+                placeholder="Search destinations by name or state..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full px-5 py-3 pl-12 border-2 border-gray-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-orange-100 focus:border-orange-400 transition"
@@ -533,11 +481,11 @@ const Experience = () => {
       <div className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-6">
           <p className="text-gray-600 font-medium">
-            Showing <span className="text-orange-500 font-bold">{filteredExperiences.length}</span> experiences
+            Showing <span className="text-orange-500 font-bold">{filteredDestinations.length}</span> experiences
           </p>
         </div>
 
-        {filteredExperiences.length === 0 ? (
+        {filteredDestinations.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-3xl shadow-sm border border-gray-100">
             <div className="text-6xl mb-4">🔍</div>
             <h3 className="text-2xl font-bold text-gray-700">No experiences found</h3>
@@ -551,7 +499,7 @@ const Experience = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredExperiences.map((dest) => {
+            {filteredDestinations.map((dest) => {
               const color = dest.subCategory === 'Bird Watching' ? 'blue' 
                 : dest.subCategory === 'Eco Tourism' ? 'emerald' 
                 : dest.subCategory === 'Wellness' ? 'teal'
@@ -564,17 +512,14 @@ const Experience = () => {
               return (
                 <div
                   key={dest.key}
-                  onClick={() => handleExperienceClick(dest)}
+                  onClick={() => handleDestinationClick(dest)}
                   className="group bg-white rounded-2xl shadow-sm hover:shadow-2xl transition-all duration-500 overflow-hidden cursor-pointer hover:-translate-y-2 border border-gray-100"
                 >
                   <div className="relative h-52 overflow-hidden">
                     <img
-                      src={dest.coverImage || dest.image || 'https://via.placeholder.com/400x300/FFA500/FFFFFF?text=No+Image'}
+                      src={dest.coverImage}
                       alt={dest.name}
                       className="w-full h-full object-cover group-hover:scale-110 transition duration-700"
-                      onError={(e) => {
-                        e.target.src = 'https://via.placeholder.com/400x300/FFA500/FFFFFF?text=No+Image';
-                      }}
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
                     
@@ -603,7 +548,7 @@ const Experience = () => {
                       </h3>
                       <span className="flex items-center gap-1 text-sm font-semibold text-gray-700">
                         <FaStar className="text-yellow-400" />
-                        {dest.rating || 'New'}
+                        {dest.rating}
                       </span>
                     </div>
                     
@@ -612,12 +557,12 @@ const Experience = () => {
                     </p>
                     
                     <p className="text-gray-600 text-sm line-clamp-2 mb-3">
-                      {dest.description?.substring(0, 100) || 'Discover this amazing experience...'}
+                      {dest.description?.substring(0, 100)}...
                     </p>
                     
                     <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                       <span className="text-xs text-gray-400 flex items-center gap-1">
-                        <FaClock className="text-orange-400" /> {dest.bestTimeToVisit || 'Anytime'}
+                        <FaClock className="text-orange-400" /> {dest.bestTimeToVisit}
                       </span>
                       <span className="text-xs font-medium text-orange-500 group-hover:gap-2 transition-all flex items-center gap-1">
                         View <FaChevronRight className="text-[10px]" />
