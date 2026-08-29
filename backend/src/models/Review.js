@@ -2,7 +2,7 @@
 const mongoose = require('mongoose');
 
 const reviewSchema = new mongoose.Schema({
-  experienceId: {  // Changed from destinationId
+  experienceId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Experience',
     required: true
@@ -10,7 +10,7 @@ const reviewSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    default: null
   },
   username: {
     type: String,
@@ -64,10 +64,10 @@ const reviewSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  images: [{
-    type: String,
+  images: {
+    type: [String],
     default: []
-  }],
+  },
   visitDate: {
     type: Date,
     default: null
@@ -81,30 +81,6 @@ const reviewSchema = new mongoose.Schema({
     default: Date.now
   }
 });
-
-// Update experience rating
-reviewSchema.statics.updateExperienceRating = async function(experienceId) {
-  try {
-    const result = await this.aggregate([
-      { $match: { experienceId: new mongoose.Types.ObjectId(experienceId) } },
-      { $group: { 
-        _id: '$experienceId',
-        averageRating: { $avg: '$rating' },
-        totalReviews: { $sum: 1 }
-      }}
-    ]);
-
-    if (result.length > 0) {
-      const Experience = mongoose.model('Experience');
-      await Experience.findByIdAndUpdate(experienceId, {
-        rating: Math.round(result[0].averageRating * 10) / 10,
-        reviewCount: result[0].totalReviews
-      });
-    }
-  } catch (error) {
-    console.error('Error updating experience rating:', error);
-  }
-};
 
 // Indexes
 reviewSchema.index({ experienceId: 1, createdAt: -1 });
