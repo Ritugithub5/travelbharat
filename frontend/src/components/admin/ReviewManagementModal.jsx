@@ -24,7 +24,7 @@ const ReviewManagementModal = ({ destination, onClose, onUpdate }) => {
     setLoading(true);
     try {
       const experienceId = destination.id || destination._id;
-      const response = await reviewAPI.getDestinationReviews(experienceId);
+      const response = await reviewAPI.getExperienceReviews(experienceId);
       setReviews(response.reviews || []);
       setStats(response.stats || { average: 0, total: 0, ratingCounts: {} });
     } catch (error) {
@@ -60,24 +60,32 @@ const ReviewManagementModal = ({ destination, onClose, onUpdate }) => {
 
   const handleSubmitReview = async (reviewData) => {
     try {
+      const experienceId = destination.id || destination._id;
+      
+      // Prepare data for API
+      const submitData = {
+        ...reviewData,
+        experienceId: experienceId,
+        userId: user?.id || user?._id,
+        username: user?.username || user?.name || 'Anonymous'
+      };
+
+      console.log('📤 Submitting review:', submitData);
+
       if (editingReview) {
-        await reviewAPI.updateReview(editingReview._id, reviewData);
+        await reviewAPI.updateReview(editingReview._id, submitData);
         toast.success('Review updated successfully!');
       } else {
-        const submitData = {
-          ...reviewData,
-          experienceId: destination.id || destination._id,
-          userId: user.id,
-          username: user.username
-        };
         await reviewAPI.createReview(submitData);
         toast.success('Review added successfully!');
       }
+      
       setShowAddReview(false);
       setEditingReview(null);
       loadReviews();
       if (onUpdate) onUpdate();
     } catch (error) {
+      console.error('Error saving review:', error);
       toast.error(error.response?.data?.message || 'Failed to save review');
     }
   };
@@ -113,7 +121,7 @@ const ReviewManagementModal = ({ destination, onClose, onUpdate }) => {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[95vh] overflow-hidden">
-        {/* Header - Fixed */}
+        {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gradient-to-r from-orange-50 to-white flex-shrink-0">
           <div>
             <h2 className="text-xl font-bold text-gray-800">Reviews for {destination.name}</h2>
@@ -151,7 +159,7 @@ const ReviewManagementModal = ({ destination, onClose, onUpdate }) => {
           {showAddReview && (
             <div className="mb-6 bg-gray-50 rounded-xl p-4 border border-gray-200">
               <ReviewForm
-                destinationId={destination.id || destination._id}
+                experienceId={destination.id || destination._id}
                 onSubmit={handleSubmitReview}
                 onCancel={handleCancelEdit}
                 initialData={editingReview}
