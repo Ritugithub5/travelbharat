@@ -182,16 +182,47 @@ app.post('/api/states', auth, admin, async (req, res) => {
   }
 });
 
+app.put('/api/states/:id', auth, admin, async (req, res) => {
+  try {
+    const state = await State.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true, runValidators: true }
+    );
+    if (!state) {
+      return res.status(404).json({ success: false, message: 'State not found' });
+    }
+    res.json({ success: true, state });
+  } catch (error) {
+    console.error('❌ Error updating state:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.delete('/api/states/:id', auth, admin, async (req, res) => {
+  try {
+    const state = await State.findByIdAndDelete(req.params.id);
+    if (!state) {
+      return res.status(404).json({ success: false, message: 'State not found' });
+    }
+    res.json({ success: true, message: 'State deleted successfully' });
+  } catch (error) {
+    console.error('❌ Error deleting state:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // ============================================
 // EXPERIENCE ROUTES
 // ============================================
 
 app.get('/api/experiences', async (req, res) => {
   try {
-    const { category, state, limit } = req.query;
+    const { category, state, limit, popular } = req.query;
     let query = {};
     if (category) query.category = category;
     if (state) query.state = state;
+    if (popular === 'true') query.isPopular = true;
     
     let experiencesQuery = Experience.find(query);
     if (limit) experiencesQuery = experiencesQuery.limit(parseInt(limit));
@@ -261,7 +292,7 @@ app.delete('/api/experiences/:id', auth, admin, async (req, res) => {
 });
 
 // ============================================
-// REVIEW ROUTES - FIXED!
+// REVIEW ROUTES - COMPLETE
 // ============================================
 
 // GET all reviews for an experience
@@ -435,7 +466,121 @@ app.delete('/api/reviews/:reviewId', auth, async (req, res) => {
   }
 });
 
-// Helper: Update experience rating
+// ===== NEW: PATCH - Verify a review (Admin only) =====
+app.patch('/api/reviews/:reviewId/verify', auth, admin, async (req, res) => {
+  try {
+    const { reviewId } = req.params;
+    console.log(`✅ Verifying review: ${reviewId}`);
+
+    const review = await Review.findById(reviewId);
+    if (!review) {
+      return res.status(404).json({
+        success: false,
+        message: 'Review not found'
+      });
+    }
+
+    // Toggle verification status
+    review.isVerified = !review.isVerified;
+    await review.save();
+
+    console.log(`✅ Review ${review.isVerified ? 'verified' : 'unverified'}: ${reviewId}`);
+    res.json({
+      success: true,
+      message: `Review ${review.isVerified ? 'verified' : 'unverified'} successfully`,
+      review
+    });
+  } catch (error) {
+    console.error('❌ Error verifying review:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error verifying review',
+      error: error.message
+    });
+  }
+});
+
+// ===== NEW: POST - Mark review as helpful =====
+app.post('/api/reviews/:reviewId/helpful', auth, async (req, res) => {
+  try {
+    const { reviewId } = req.params;
+    const userId = req.user.id;
+
+    const review = await Review.findById(reviewId);
+    if (!review) {
+      return res.status(404).json({
+        success: false,
+        message: 'Review not found'
+      });
+    }
+
+    // Check if user already marked as helpful
+    const isHelpful = review.helpfulUsers && review.helpfulUsers.includes(userId);
+    
+    if (isHelpful) {
+      // Remove helpful
+      review.helpfulUsers = review.helpfulUsers.filter(id => id.toString() !== userId);
+      review.helpfulCount = review.helpfulUsers.length;
+    } else {
+      // Add helpful
+      if (!review.helpfulUsers) review.helpfulUsers = [];
+      review.helpfulUsers.push(userId);
+      review.helpfulCount = review.helpfulUsers.length;
+    }
+
+    await review.save();
+
+    res.json({
+      success: true,
+      message: isHelpful ? 'Removed helpful mark' : 'Marked as helpful',
+      helpfulCount: review.helpfulCount,
+      isHelpful: !isHelpful
+    });
+  } catch (error) {
+    console.error('❌ Error marking helpful:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error marking helpful',
+      error: error.message
+    });
+  }
+});
+
+// ===== NEW: POST - Report a review =====
+app.post('/api/reviews/:reviewId/report', auth, async (req, res) => {
+  try {
+    const { reviewId } = req.params;
+    const { reason } = req.body;
+
+    const review = await Review.findById(reviewId);
+    if (!review) {
+      return res.status(404).json({
+        success: false,
+        message: 'Review not found'
+      });
+    }
+
+    review.reported = true;
+    review.reportReason = reason || 'No reason provided';
+    await review.save();
+
+    res.json({
+      success: true,
+      message: 'Review reported successfully'
+    });
+  } catch (error) {
+    console.error('❌ Error reporting review:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error reporting review',
+      error: error.message
+    });
+  }
+});
+
+// ============================================
+// HELPER: Update experience rating
+// ============================================
 async function updateExperienceRating(experienceId) {
   try {
     const reviews = await Review.find({ experienceId });
@@ -496,13 +641,18 @@ app.get('/', (req, res) => {
       },
       data: {
         states: 'GET /api/states',
+        statesCrud: 'POST /api/states, PUT /api/states/:id, DELETE /api/states/:id',
         experiences: 'GET /api/experiences',
-        experience: 'GET /api/experiences/:id'
+        experience: 'GET /api/experiences/:id',
+        experiencesCrud: 'POST /api/experiences, PUT /api/experiences/:id, DELETE /api/experiences/:id'
       },
       reviews: {
         get: 'GET /api/experiences/:experienceId/reviews',
         create: 'POST /api/experiences/:experienceId/reviews',
-        delete: 'DELETE /api/reviews/:reviewId'
+        delete: 'DELETE /api/reviews/:reviewId',
+        verify: 'PATCH /api/reviews/:reviewId/verify',
+        helpful: 'POST /api/reviews/:reviewId/helpful',
+        report: 'POST /api/reviews/:reviewId/report'
       },
       utilities: {
         test: 'GET /api/test',
@@ -535,11 +685,20 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log(`✅ POST /api/auth/login`);
   console.log(`✅ POST /api/auth/register`);
   console.log(`✅ GET  /api/states`);
+  console.log(`✅ POST /api/states (Admin)`);
+  console.log(`✅ PUT  /api/states/:id (Admin)`);
+  console.log(`✅ DELETE /api/states/:id (Admin)`);
   console.log(`✅ GET  /api/experiences`);
   console.log(`✅ GET  /api/experiences/:id`);
-  console.log(`✅ GET  /api/experiences/:experienceId/reviews  ← FIXED`);
-  console.log(`✅ POST /api/experiences/:experienceId/reviews  ← FIXED`);
-  console.log(`✅ DELETE /api/reviews/:reviewId               ← FIXED`);
+  console.log(`✅ POST /api/experiences (Admin)`);
+  console.log(`✅ PUT  /api/experiences/:id (Admin)`);
+  console.log(`✅ DELETE /api/experiences/:id (Admin)`);
+  console.log(`✅ GET  /api/experiences/:experienceId/reviews`);
+  console.log(`✅ POST /api/experiences/:experienceId/reviews`);
+  console.log(`✅ DELETE /api/reviews/:reviewId`);
+  console.log(`✅ PATCH /api/reviews/:reviewId/verify (Admin) ← NEW`);
+  console.log(`✅ POST /api/reviews/:reviewId/helpful ← NEW`);
+  console.log(`✅ POST /api/reviews/:reviewId/report ← NEW`);
   console.log(`✅ GET  /api/test`);
   console.log(`✅ GET  /api/health`);
   console.log(`✅ GET  /`);
