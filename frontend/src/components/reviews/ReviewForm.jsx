@@ -2,14 +2,14 @@
 import React, { useState } from 'react';
 import { FaStar, FaTimes, FaPlus, FaMinus } from 'react-icons/fa';
 
-const ReviewForm = ({ destinationId, onSubmit, onCancel, initialData = null, isAdmin = false }) => {
+const ReviewForm = ({ experienceId, onSubmit, onCancel, initialData = null, isAdmin = false }) => {
   const [formData, setFormData] = useState({
     rating: initialData?.rating || 0,
     title: initialData?.title || '',
     comment: initialData?.comment || '',
     pros: initialData?.pros || [],
     cons: initialData?.cons || [],
-    visitDate: initialData?.visitDate || '',
+    visitDate: initialData?.visitDate ? initialData.visitDate.split('T')[0] : '',
     images: initialData?.images || []
   });
   const [newPro, setNewPro] = useState('');
@@ -22,6 +22,7 @@ const ReviewForm = ({ destinationId, onSubmit, onCancel, initialData = null, isA
     setError('');
     setLoading(true);
 
+    // Validation
     if (formData.rating === 0) {
       setError('Please select a rating');
       setLoading(false);
@@ -41,7 +42,23 @@ const ReviewForm = ({ destinationId, onSubmit, onCancel, initialData = null, isA
     }
 
     try {
-      await onSubmit(formData);
+      // Prepare data - match Review model schema
+      const reviewData = {
+        rating: formData.rating,
+        title: formData.title.trim(),
+        comment: formData.comment.trim(),
+        pros: formData.pros.filter(p => p.trim()),
+        cons: formData.cons.filter(c => c.trim()),
+        visitDate: formData.visitDate || null,
+        images: formData.images || [],
+        experienceId: experienceId, // Use experienceId
+        ...(initialData?._id && { reviewId: initialData._id })
+      };
+
+      console.log('📤 Submitting review data:', reviewData);
+
+      await onSubmit(reviewData);
+      
     } catch (err) {
       setError(err.message || 'Something went wrong');
     } finally {
@@ -79,7 +96,7 @@ const ReviewForm = ({ destinationId, onSubmit, onCancel, initialData = null, isA
     <div className="bg-white rounded-xl p-6 border border-gray-200">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-bold text-gray-800">
-          {isAdmin ? (initialData ? 'Edit Review' : 'Add Review') : (initialData ? 'Edit Your Review' : 'Write a Review')}
+          {isAdmin ? (initialData ? '✏️ Edit Review' : '📝 Add Review') : (initialData ? '✏️ Edit Your Review' : '✍️ Write a Review')}
         </h3>
         {onCancel && (
           <button
@@ -94,7 +111,7 @@ const ReviewForm = ({ destinationId, onSubmit, onCancel, initialData = null, isA
       <form onSubmit={handleSubmit}>
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-2 rounded-lg text-sm mb-4">
-            {error}
+            ⚠️ {error}
           </div>
         )}
 
@@ -246,7 +263,7 @@ const ReviewForm = ({ destinationId, onSubmit, onCancel, initialData = null, isA
         {/* Visit Date */}
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            When did you visit?
+            📅 When did you visit?
           </label>
           <input
             type="date"
@@ -257,7 +274,7 @@ const ReviewForm = ({ destinationId, onSubmit, onCancel, initialData = null, isA
           />
         </div>
 
-        {/* ===== SUBMIT BUTTON - VISIBLE ===== */}
+        {/* Submit Buttons */}
         <div className="mt-6 pt-4 border-t-2 border-gray-200">
           <button
             type="submit"
@@ -275,7 +292,7 @@ const ReviewForm = ({ destinationId, onSubmit, onCancel, initialData = null, isA
               </div>
             ) : (
               <div className="flex items-center justify-center gap-2">
-                <span className="text-xl">✍️</span>
+                <span className="text-xl">⭐</span>
                 {initialData ? 'Update Review' : 'Submit Review'}
                 <span className="text-xl">→</span>
               </div>
