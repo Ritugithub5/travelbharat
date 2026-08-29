@@ -11,36 +11,57 @@ try {
   console.error('❌ Review controller not found, creating mock controller');
   // Mock controller functions if file doesn't exist
   reviewController = {
-    getDestinationReviews: (req, res) => res.json({ success: true, message: 'Reviews endpoint' }),
-    createReview: (req, res) => res.json({ success: true, message: 'Create review endpoint' }),
-    deleteReview: (req, res) => res.json({ success: true, message: 'Delete review endpoint' }),
-    verifyReview: (req, res) => res.json({ success: true, message: 'Verify review endpoint' }),
-    markHelpful: (req, res) => res.json({ success: true, message: 'Mark helpful endpoint' }),
-    reportReview: (req, res) => res.json({ success: true, message: 'Report review endpoint' })
+    getExperienceReviews: (req, res) => {
+      res.json({ 
+        success: true, 
+        reviews: [], 
+        stats: { total: 0, average: 0, ratingCounts: {} } 
+      });
+    },
+    createReview: (req, res) => {
+      res.status(201).json({ 
+        success: true, 
+        message: 'Review created successfully',
+        review: req.body 
+      });
+    },
+    deleteReview: (req, res) => {
+      res.json({ success: true, message: 'Review deleted successfully' });
+    },
+    verifyReview: (req, res) => {
+      res.json({ success: true, message: 'Review verified successfully' });
+    },
+    markHelpful: (req, res) => {
+      res.json({ success: true, message: 'Marked as helpful' });
+    },
+    reportReview: (req, res) => {
+      res.json({ success: true, message: 'Review reported' });
+    }
   };
 }
 
-// ============================================
-// IMPORTANT: Specific routes MUST come before 
-// the /:id route to avoid conflicts
-// ============================================
+// GET - Get all reviews for an experience
+// URL: /api/experiences/:experienceId/reviews
+router.get('/experiences/:experienceId/reviews', reviewController.getExperienceReviews);
 
-// GET reviews for an experience (Public)
-router.get('/experience/:experienceId', reviewController.getDestinationReviews);
-
-// POST - Create a review (Private)
-router.post('/', auth, reviewController.createReview);
-
-// POST - Mark review as helpful (Private)
-router.post('/:id/helpful', auth, reviewController.markHelpful);
-
-// POST - Report a review (Private)
-router.post('/:id/report', auth, reviewController.reportReview);
+// POST - Create a review for an experience
+// URL: /api/experiences/:experienceId/reviews
+router.post('/experiences/:experienceId/reviews', auth, reviewController.createReview);
 
 // DELETE - Delete a review (Admin only)
-router.delete('/:id', auth, authorize('admin'), reviewController.deleteReview);
+// URL: /api/reviews/:reviewId
+router.delete('/reviews/:id', auth, authorize('admin'), reviewController.deleteReview);
 
 // PUT - Verify a review (Admin only)
-router.put('/:id/verify', auth, authorize('admin'), reviewController.verifyReview);
+// URL: /api/reviews/:id/verify
+router.put('/reviews/:id/verify', auth, authorize('admin'), reviewController.verifyReview);
 
-module.exports = router;
+// POST - Mark review as helpful
+// URL: /api/reviews/:id/helpful
+router.post('/reviews/:id/helpful', auth, reviewController.markHelpful);
+
+// POST - Report a review
+// URL: /api/reviews/:id/report
+router.post('/reviews/:id/report', auth, reviewController.reportReview);
+
+module.exports = router; 
