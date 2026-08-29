@@ -1,126 +1,100 @@
 // backend/src/controllers/reviewController.js
 const Review = require('../models/Review');
 const Experience = require('../models/Experience');
-const mongoose = require('mongoose');
 
-// @desc    Get reviews for an experience
-// @route   GET /api/reviews/experience/:experienceId
-// @access  Public
-exports.getDestinationReviews = async (req, res) => {
+// ===== Get all reviews for an experience =====
+const getExperienceReviews = async (req, res) => {
   try {
     const { experienceId } = req.params;
-    const { page = 1, limit = 10, sort = 'newest' } = req.query;
+    
+    console.log(`📊 Fetching reviews for experience: ${experienceId}`);
 
-    // Validate ObjectId
-    if (!mongoose.Types.ObjectId.isValid(experienceId)) {
-      return res.status(400).json({
+    // Check if experience exists
+    const experience = await Experience.findById(experienceId);
+    if (!experience) {
+      return res.status(404).json({
         success: false,
-        message: 'Invalid experience ID format'
+        message: 'Experience not found'
       });
     }
 
-    const skip = (parseInt(page) - 1) * parseInt(limit);
-    
-    let sortOption = {};
-    switch(sort) {
-      case 'newest': sortOption = { createdAt: -1 }; break;
-      case 'oldest': sortOption = { createdAt: 1 }; break;
-      case 'highest': sortOption = { rating: -1 }; break;
-      case 'lowest': sortOption = { rating: 1 }; break;
-      case 'helpful': sortOption = { helpfulCount: -1 }; break;
-      default: sortOption = { createdAt: -1 };
-    }
+    // Get all reviews for this experience
+    const reviews = await Review.find({ experienceId })
+      .sort({ createdAt: -1 });
 
-    const reviews = await Review.find({ experienceId })  // Changed from destinationId
-      .sort(sortOption)
-      .skip(skip)
-      .limit(parseInt(limit))
-      .lean();
+    console.log(`✅ Found ${reviews.length} reviews`);
 
-    const total = await Review.countDocuments({ experienceId });  // Changed from destinationId
+    // Calculate stats
+    const total = reviews.length;
+    const average = total > 0 
+      ? reviews.reduce((sum, r) => sum + r.rating, 0) / total 
+      : 0;
 
-    // Get rating summary
-    const ratingSummary = await Review.aggregate([
-      { $match: { experienceId: new mongoose.Types.ObjectId(experienceId) } },  // Changed from destinationId
-      { $group: { 
-        _id: '$rating',
-        count: { $sum: 1 }
-      }},
-      { $sort: { _id: -1 } }
-    ]);
-
-    const ratingCounts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-    ratingSummary.forEach(item => {
-      ratingCounts[item._id] = item.count;
+    // Rating distribution
+    const ratingCounts = {};
+    reviews.forEach(r => {
+      const key = Math.round(r.rating);
+      ratingCounts[key] = (ratingCounts[key] || 0) + 1;
     });
-
-    const avgRating = await Review.aggregate([
-      { $match: { experienceId: new mongoose.Types.ObjectId(experienceId) } },  // Changed from destinationId
-      { $group: { 
-        _id: null,
-        average: { $avg: '$rating' },
-        total: { $sum: 1 }
-      }}
-    ]);
 
     res.json({
       success: true,
       reviews,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        pages: Math.ceil(total / parseInt(limit))
-      },
       stats: {
-        average: avgRating[0]?.average || 0,
-        total: avgRating[0]?.total || 0,
+        total,
+        average: Math.round(average * 10) / 10,
         ratingCounts
       }
     });
   } catch (error) {
-    console.error('Error fetching reviews:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: error.message 
+    console.error('❌ Error fetching reviews:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching reviews',
+      error: error.message
     });
   }
 };
 
-// @desc    Create a review
-// @route   POST /api/reviews
-// @access  Private
-exports.createReview = async (req, res) => {
+// ===== Create a new review =====
+const createReview = async (req, res) => {
   try {
+    const { experienceId } = req.params;
     const { 
-      experienceId,  // Changed from destinationId
       rating, 
       title, 
       comment, 
       pros, 
       cons, 
       visitDate, 
-      images 
+      images,
+      userId,
+      username,
+      userImage 
     } = req.body;
 
-    // Validate ObjectId
-    if (!mongoose.Types.ObjectId.isValid(experienceId)) {
+    console.log(`📝 Creating review for experience: ${experienceId}`);
+    console.log('📝 Review data:', { rating, title, comment, pros, cons });
+
+    // Validate required fields
+    if (!rating || rating < 1 || rating > 5) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid experience ID format'
+        message: 'Rating between 1 and 5 is required'
       });
     }
 
-    // Check if user already reviewed this experience
-    const existingReview = await Review.findOne({
-      experienceId,  // Changed from destinationId
-      userId: req.user.id
-    });
-
-    if (existingReview) {
+    if (!title || !title.trim()) {
       return res.status(400).json({
         success: false,
-        message: 'You have already reviewed this experience'
+        message: 'Title is required'
+      });
+    }
+
+    if (!comment || !comment.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Review comment is required'
       });
     }
 
@@ -133,46 +107,52 @@ exports.createReview = async (req, res) => {
       });
     }
 
+    // Create review
     const review = new Review({
-      experienceId,  // Changed from destinationId
-      userId: req.user.id,
-      username: req.user.username,
-      userImage: req.user.profilePicture || '',
-      rating,
-      title,
-      comment,
+      experienceId,
+      userId: userId || req.user?.id || null,
+      username: username || req.user?.username || 'Anonymous',
+      userImage: userImage || '',
+      rating: parseInt(rating),
+      title: title.trim(),
+      comment: comment.trim(),
       pros: pros || [],
       cons: cons || [],
       visitDate: visitDate || null,
       images: images || [],
-      isVerified: req.user.role === 'admin' || req.user.role === 'editor'
+      isVerified: req.user?.isAdmin || false,
+      createdAt: new Date()
     });
 
     await review.save();
+    console.log(`✅ Review created: ${review._id}`);
 
     // Update experience rating
-    await Review.updateExperienceRating(experienceId);
+    await updateExperienceRating(experienceId);
 
     res.status(201).json({
       success: true,
-      message: 'Review created successfully',
+      message: 'Review added successfully',
       review
     });
   } catch (error) {
-    console.error('Error creating review:', error);
+    console.error('❌ Error creating review:', error);
     res.status(500).json({
       success: false,
-      message: error.message
+      message: 'Error creating review',
+      error: error.message
     });
   }
 };
 
-// @desc    Delete a review (Admin only)
-// @route   DELETE /api/reviews/:id
-// @access  Private/Admin
-exports.deleteReview = async (req, res) => {
+// ===== Delete a review =====
+const deleteReview = async (req, res) => {
   try {
-    const review = await Review.findById(req.params.id);
+    const { id } = req.params;
+    
+    console.log(`🗑️ Deleting review: ${id}`);
+
+    const review = await Review.findById(id);
     if (!review) {
       return res.status(404).json({
         success: false,
@@ -180,31 +160,35 @@ exports.deleteReview = async (req, res) => {
       });
     }
 
-    const experienceId = review.experienceId;  // Changed from destinationId
+    const experienceId = review.experienceId;
     await review.deleteOne();
 
     // Update experience rating
-    await Review.updateExperienceRating(experienceId);
+    await updateExperienceRating(experienceId);
 
+    console.log(`✅ Review deleted: ${id}`);
     res.json({
       success: true,
       message: 'Review deleted successfully'
     });
   } catch (error) {
-    console.error('Error deleting review:', error);
+    console.error('❌ Error deleting review:', error);
     res.status(500).json({
       success: false,
-      message: error.message
+      message: 'Error deleting review',
+      error: error.message
     });
   }
 };
 
-// @desc    Verify a review (Admin only)
-// @route   PUT /api/reviews/:id/verify
-// @access  Private/Admin
-exports.verifyReview = async (req, res) => {
+// ===== Verify a review =====
+const verifyReview = async (req, res) => {
   try {
-    const review = await Review.findById(req.params.id);
+    const { id } = req.params;
+    
+    console.log(`✅ Verifying review: ${id}`);
+
+    const review = await Review.findById(id);
     if (!review) {
       return res.status(404).json({
         success: false,
@@ -212,29 +196,32 @@ exports.verifyReview = async (req, res) => {
       });
     }
 
-    review.isVerified = true;
+    review.isVerified = !review.isVerified;
     await review.save();
 
+    console.log(`✅ Review ${review.isVerified ? 'verified' : 'unverified'}: ${id}`);
     res.json({
       success: true,
-      message: 'Review verified successfully',
+      message: `Review ${review.isVerified ? 'verified' : 'unverified'} successfully`,
       review
     });
   } catch (error) {
-    console.error('Error verifying review:', error);
+    console.error('❌ Error verifying review:', error);
     res.status(500).json({
       success: false,
-      message: error.message
+      message: 'Error verifying review',
+      error: error.message
     });
   }
 };
 
-// @desc    Mark review as helpful
-// @route   POST /api/reviews/:id/helpful
-// @access  Private
-exports.markHelpful = async (req, res) => {
+// ===== Mark review as helpful =====
+const markHelpful = async (req, res) => {
   try {
-    const review = await Review.findById(req.params.id);
+    const { id } = req.params;
+    const userId = req.user?.id;
+
+    const review = await Review.findById(id);
     if (!review) {
       return res.status(404).json({
         success: false,
@@ -242,44 +229,43 @@ exports.markHelpful = async (req, res) => {
       });
     }
 
-    const userId = req.user.id;
-    const alreadyHelped = review.helpfulUsers?.includes(userId) || false;
-
-    if (alreadyHelped) {
-      review.helpfulUsers = review.helpfulUsers.filter(
-        id => id.toString() !== userId
-      );
-      review.helpfulCount = Math.max(0, (review.helpfulCount || 0) - 1);
+    // Check if user already marked as helpful
+    if (review.helpfulUsers && review.helpfulUsers.includes(userId)) {
+      // Remove helpful
+      review.helpfulUsers = review.helpfulUsers.filter(id => id.toString() !== userId);
+      review.helpfulCount = review.helpfulUsers.length;
     } else {
+      // Add helpful
       if (!review.helpfulUsers) review.helpfulUsers = [];
       review.helpfulUsers.push(userId);
-      review.helpfulCount = (review.helpfulCount || 0) + 1;
+      review.helpfulCount = review.helpfulUsers.length;
     }
 
     await review.save();
 
     res.json({
       success: true,
-      message: alreadyHelped ? 'Removed helpful mark' : 'Marked as helpful',
+      message: 'Helpful status updated',
       helpfulCount: review.helpfulCount,
-      isHelpful: !alreadyHelped
+      isHelpful: review.helpfulUsers.includes(userId)
     });
   } catch (error) {
-    console.error('Error marking helpful:', error);
+    console.error('❌ Error marking helpful:', error);
     res.status(500).json({
       success: false,
-      message: error.message
+      message: 'Error marking helpful',
+      error: error.message
     });
   }
 };
 
-// @desc    Report a review
-// @route   POST /api/reviews/:id/report
-// @access  Private
-exports.reportReview = async (req, res) => {
+// ===== Report a review =====
+const reportReview = async (req, res) => {
   try {
+    const { id } = req.params;
     const { reason } = req.body;
-    const review = await Review.findById(req.params.id);
+
+    const review = await Review.findById(id);
     if (!review) {
       return res.status(404).json({
         success: false,
@@ -288,7 +274,7 @@ exports.reportReview = async (req, res) => {
     }
 
     review.reported = true;
-    review.reportReason = reason || 'Inappropriate content';
+    review.reportReason = reason || 'No reason provided';
     await review.save();
 
     res.json({
@@ -296,10 +282,40 @@ exports.reportReview = async (req, res) => {
       message: 'Review reported successfully'
     });
   } catch (error) {
-    console.error('Error reporting review:', error);
+    console.error('❌ Error reporting review:', error);
     res.status(500).json({
       success: false,
-      message: error.message
+      message: 'Error reporting review',
+      error: error.message
     });
   }
+};
+
+// ===== Helper: Update experience rating =====
+async function updateExperienceRating(experienceId) {
+  try {
+    const reviews = await Review.find({ experienceId });
+    const total = reviews.length;
+    const average = total > 0 
+      ? reviews.reduce((sum, r) => sum + r.rating, 0) / total 
+      : 0;
+
+    await Experience.findByIdAndUpdate(experienceId, {
+      rating: Math.round(average * 10) / 10,
+      reviewCount: total
+    });
+
+    console.log(`✅ Updated experience ${experienceId}: rating=${average.toFixed(1)}, count=${total}`);
+  } catch (error) {
+    console.error('❌ Error updating experience rating:', error);
+  }
+}
+
+module.exports = {
+  getExperienceReviews,
+  createReview,
+  deleteReview,
+  verifyReview,
+  markHelpful,
+  reportReview
 };
