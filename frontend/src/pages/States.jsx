@@ -17,21 +17,31 @@ import {
 import { regionsData } from '../data/statesData';
 import api from '../services/api';
 
+// ===== REGION STATE MAP - MATCHES statesData.js EXACTLY =====
+const regionStateMap = {
+  'North India': ['Himachal Pradesh', 'Ladakh', 'Kashmir'],
+  'South India': ['Tamil Nadu', 'Telangana'],
+  'East India': ['West Bengal', 'Odisha'],
+  'West India': ['Maharashtra', 'Gujarat'],
+  'Central India': ['Madhya Pradesh'],
+  'North East India': ['Meghalaya']  // ← Matches statesData.js
+};
+
 const States = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRegion, setSelectedRegion] = useState('All');
-  const [viewMode, setViewMode] = useState('grid'); // grid, list, compact
-  const [sortBy, setSortBy] = useState('name'); // name, popularity, destinations
+  const [viewMode, setViewMode] = useState('grid');
+  const [sortBy, setSortBy] = useState('name');
   const [showFilters, setShowFilters] = useState(false);
   const [favorites, setFavorites] = useState([]);
   const [hoveredState, setHoveredState] = useState(null);
   const searchRef = useRef(null);
 
-  // NEW: State for MongoDB data
+  // State for MongoDB data
   const [dbStates, setDbStates] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  // NEW: Fetch states from MongoDB
+  // Fetch states from MongoDB
   useEffect(() => {
     fetchStatesFromMongoDB();
   }, []);
@@ -52,8 +62,8 @@ const States = () => {
     }
   };
 
-  // Get unique regions for filter
-  const regions = ['All', ...new Set(regionsData.map(r => r.name))];
+  // Get unique regions for filter - from regionStateMap
+  const regions = ['All', ...Object.keys(regionStateMap)];
 
   // Toggle favorite
   const toggleFavorite = (stateId, e) => {
@@ -66,41 +76,62 @@ const States = () => {
     );
   };
 
-  // Filter and sort states - COMBINE static + MongoDB data
+  // Get region for a state - checks both static and MongoDB data
+  const getRegionForState = (stateName) => {
+    for (const [region, states] of Object.entries(regionStateMap)) {
+      if (states.includes(stateName)) {
+        return region;
+      }
+    }
+    return 'Other';
+  };
+
+  // Get region details from regionsData
+  const getRegionDetails = (regionName) => {
+    // Find the region in regionsData
+    const region = regionsData.find(r => r.name === regionName);
+    return {
+      icon: region?.icon || '📍',
+      color: region?.color || 'from-gray-400 to-gray-500',
+      bgColor: region?.bgColor || 'bg-gray-100',
+      description: region?.description || ''
+    };
+  };
+
+  // Filter and sort states
   const getFilteredStates = () => {
     let allStates = [];
-    
+    const seenNames = new Set();
+
     // 1. Static states from regionsData
     regionsData.forEach(region => {
-      if (selectedRegion !== 'All' && region.name !== selectedRegion) return;
-      
-      const states = region.states.filter(state =>
-        state.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        state.capital.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        state.famousFor.some(f => f.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        state.description.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      
-      states.forEach(state => {
-        allStates.push({
-          ...state,
-          regionName: region.name,
-          regionIcon: region.icon,
-          regionColor: region.color,
-          source: 'static'
-        });
+      region.states.forEach(state => {
+        const stateName = state.name;
+        if (!seenNames.has(stateName)) {
+          seenNames.add(stateName);
+          allStates.push({
+            ...state,
+            id: state.id || stateName,
+            regionName: region.name,  // Use the region name from data
+            regionIcon: region.icon,
+            regionColor: region.color,
+            source: 'static'
+          });
+        }
       });
     });
 
-    // 2. MongoDB states
+    // 2. MongoDB states (only add if not already in static)
     dbStates.forEach(state => {
-      // Check if state already exists in static data (by name)
-      const exists = allStates.some(s => s.name === state.name);
-      if (!exists) {
-        const region = regionsData.find(r => r.states.some(s => s.name === state.name));
+      const stateName = state.name;
+      if (!seenNames.has(stateName)) {
+        seenNames.add(stateName);
+        const regionName = getRegionForState(stateName);
+        const regionDetails = getRegionDetails(regionName);
+        
         allStates.push({
-          id: state._id || state.id,
-          name: state.name,
+          id: state._id || state.id || stateName,
+          name: stateName,
           capital: state.capital || 'N/A',
           description: state.description || '',
           famousFor: state.famousFor || [],
@@ -109,15 +140,34 @@ const States = () => {
           area: state.area || 'N/A',
           stateCode: state.stateCode || '',
           image: state.imageUrl || 'https://via.placeholder.com/400x300/FFA500/FFFFFF?text=State',
-          regionName: state.region || region?.name || 'Other',
-          regionIcon: region?.icon || '📍',
-          regionColor: region?.color || 'from-gray-400 to-gray-500',
+          regionName: regionName,
+          regionIcon: regionDetails.icon,
+          regionColor: regionDetails.color,
           destinationCount: state.destinationCount || 0,
           bestTimeToVisit: state.bestTimeToVisit || 'All year',
-          source: 'mongodb'
+          source: 'mongodb',
+          isMongoDB: true
         });
       }
     });
+
+    // Apply region filter
+    if (selectedRegion !== 'All') {
+      allStates = allStates.filter(state => 
+        state.regionName === selectedRegion
+      );
+    }
+
+    // Apply search filter
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase().trim();
+      allStates = allStates.filter(state =>
+        state.name?.toLowerCase().includes(term) ||
+        state.capital?.toLowerCase().includes(term) ||
+        state.famousFor?.some(f => f.toLowerCase().includes(term)) ||
+        state.description?.toLowerCase().includes(term)
+      );
+    }
 
     // Sort states
     switch(sortBy) {
@@ -166,18 +216,12 @@ const States = () => {
     'Gujarat': '/Gujarat'
   };
 
-  // Get region color for state
-  const getStateColor = (state) => {
-    const region = regionsData.find(r => r.states.some(s => s.id === state.id));
-    return region?.color || 'from-gray-500 to-gray-600';
-  };
-
-  // Render state card based on view mode
+  // Render state card
   const renderStateCard = (state) => {
     const isFavorite = favorites.includes(state.id);
     const pagePath = statePageMap[state.name] || `/state/${state.id}`;
+    const regionDetails = getRegionDetails(state.regionName);
 
-    // Default: Grid view
     return (
       <Link
         key={state.id || state.name}
@@ -198,12 +242,12 @@ const States = () => {
           
           {/* State Code Badge */}
           <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold text-gray-700 shadow-lg">
-            {state.stateCode || state.code}
+            {state.stateCode || 'IN'}
           </div>
           
           {/* Region Badge */}
           <div className="absolute top-3 left-3">
-            <span className="text-2xl">{state.regionIcon || '📍'}</span>
+            <span className="text-2xl">{state.regionIcon || regionDetails.icon}</span>
           </div>
 
           {/* Favorite Button */}
@@ -235,6 +279,13 @@ const States = () => {
               </span>
             </div>
           </div>
+
+          {/* MongoDB Badge */}
+          {state.isMongoDB && (
+            <div className="absolute bottom-3 right-3 bg-blue-500/80 backdrop-blur-sm px-2 py-0.5 rounded text-[10px] text-white">
+              DB
+            </div>
+          )}
         </div>
 
         {/* Content */}
@@ -249,7 +300,7 @@ const States = () => {
                 {state.capital}
               </p>
             </div>
-            <span className={`text-xs px-2 py-1 rounded-full bg-gradient-to-r ${state.regionColor || 'from-gray-400 to-gray-500'} text-white`}>
+            <span className={`text-xs px-2 py-1 rounded-full bg-gradient-to-r ${state.regionColor || regionDetails.color} text-white`}>
               {state.regionName || 'India'}
             </span>
           </div>
@@ -287,7 +338,7 @@ const States = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      {/* Premium Hero Section with Parallax Effect */}
+      {/* Hero Section */}
       <section className="relative overflow-hidden bg-gradient-to-r from-gray-400 to-red-700">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-full blur-3xl animate-pulse"></div>
