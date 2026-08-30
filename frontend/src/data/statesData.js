@@ -80,6 +80,33 @@ export const regionsData = [
             bestTimeToVisit: 'June to September'
           }
         ]
+      },
+      {
+        id: 'kashmir',
+        name: 'Kashmir',
+        capital: 'Srinagar',
+        code: 'JK',
+        image: kashmirImg,
+        description: 'Paradise on Earth with beautiful lakes, gardens, and mountains.',
+        famousFor: ['Dal Lake', 'Houseboats', 'Mughal Gardens', 'Trekking'],
+        bestTimeToVisit: 'April to October',
+        language: ['Kashmiri', 'Dogri', 'Urdu', 'Hindi'],
+        population: '12.5 million',
+        area: '222,236 km²',
+        destinations: [
+          {
+            name: 'Dal Lake',
+            category: 'Nature',
+            description: 'Iconic lake with houseboats and floating gardens.',
+            bestTimeToVisit: 'April to October'
+          },
+          {
+            name: 'Gulmarg',
+            category: 'Adventure',
+            description: 'Skiing paradise with stunning Himalayan views.',
+            bestTimeToVisit: 'December to March (Snow), April to June (Green)'
+          }
+        ]
       }
     ]
   },
@@ -342,33 +369,7 @@ export const regionsData = [
           }
         ]
       },
-      {
-        id: 'kashmir',
-        name: 'Kashmir',
-        capital: 'Srinagar',
-        code: 'JK',
-        image: kashmirImg,
-        description: 'Paradise on Earth with beautiful lakes, gardens, and mountains.',
-        famousFor: ['Dal Lake', 'Houseboats', 'Mughal Gardens', 'Trekking'],
-        bestTimeToVisit: 'April to October',
-        language: ['Kashmiri', 'Dogri', 'Urdu', 'Hindi'],
-        population: '12.5 million',
-        area: '222,236 km²',
-        destinations: [
-          {
-            name: 'Dal Lake',
-            category: 'Nature',
-            description: 'Iconic lake with houseboats and floating gardens.',
-            bestTimeToVisit: 'April to October'
-          },
-          {
-            name: 'Gulmarg',
-            category: 'Adventure',
-            description: 'Skiing paradise with stunning Himalayan views.',
-            bestTimeToVisit: 'December to March (Snow), April to June (Green)'
-          }
-        ]
-      }
+      
     ]
   }
 ];
